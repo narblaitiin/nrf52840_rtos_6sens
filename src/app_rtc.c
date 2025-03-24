@@ -29,7 +29,7 @@ int8_t app_rtc_init(const struct device *dev)
 }
 
 //  ========== app_rtc_get_time ============================================================
-int* app_rtc_get_time (const struct device *dev)
+int32_t* app_rtc_get_time (const struct device *dev)
 {
     int8_t ret = 0;
 	struct rtc_time time = {
@@ -40,7 +40,7 @@ int* app_rtc_get_time (const struct device *dev)
 		.tm_min = 19,
 		.tm_sec = 0,
 	};
-	int buffer[sizeof(time)];
+	int32_t buffer[sizeof(time)];
 
 	ret = rtc_set_time(dev, &time);
 	if (ret < 0) {

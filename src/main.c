@@ -8,6 +8,7 @@
 #include "app_adc.h"
 #include "app_eeprom.h"
 #include "app_flash.h"
+#include "app_geo_handler.h"
 #include "app_lorawan.h"
 #include "app_rtc.h"
 #include "app_sht31.h"
@@ -30,17 +31,16 @@ int8_t main(void)
 {
 	const struct device *dev;
 	struct nvs_fs fs;
-	int *timestamp;
+	int32_t *timestamp;
 	int16_t geo_adc;
 	uint8_t dev_eui[] = LORAWAN_DEV_EUI;
 	int8_t ret;
-	int8_t itr = 0;
 
 	struct data {
 		uint8_t *id;
 		int32_t timestamp;
-		uint16_t val;
-	} payload[100]; // just for test
+		int16_t val;
+	} payload[MAX_SAMPLES]; // just for test
 
 	static const struct gpio_dt_spec led_tx = GPIO_DT_SPEC_GET(LED_TX, gpios);
     static const struct gpio_dt_spec led_rx = GPIO_DT_SPEC_GET(LED_RX, gpios);
@@ -64,16 +64,20 @@ int8_t main(void)
 	// beginning of isr timer
 	k_timer_start(&adc_timer, K_NO_WAIT, K_MINUTES(15));
 
-	while(1)
+	while(1) {
 		geo_adc = app_nrf52_get_ain0();
-		if (geo_adc > THRESHOLD) {
-			payload[itr].id = dev_eui;
-			payload[itr+1].timestamp = app_rtc_get_time (dev);
-			if (itr+2 < MAX_RECORDS) {
-				payload[itr+2].val = geo_adc;
-				itr++;
-			}
 
+		if (geo_adc > THRESHOLD) {
+			payload->id = dev_eui;
+			payload->timestamp = app_rtc_get_time (dev);
+
+			// putting n structures in fisrt page for this test
+			// for (int8_t i = 0; i < MAX_SAMPLES; i++) {
+			// 	payload->val = app_nrf52_get_ain0();
+			// }
+
+			payload->val = app_geo_handler(dev);
+			
 			gpio_pin_set_dt(&led_tx, 1);
 			ret = lorawan_send(LORAWAN_PORT, payload, sizeof(payload), LORAWAN_MSG_UNCONFIRMED);
 			gpio_pin_set_dt(&led_tx, 0);
@@ -90,7 +94,7 @@ int8_t main(void)
 				// flashing of the LED when a packet is transmitted
 				printk("data sent!\n");
 			}
-		itr = 0;
 		}
+	}
 	return 0;
 }
