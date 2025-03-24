@@ -43,7 +43,7 @@ int8_t app_eeprom_init(const struct device *dev)
 }
 
 //  ========== app_eeprom_write ============================================================
-int8_t app_eeprom_write(const struct device *dev, int16_t data[])
+int8_t app_eeprom_write(const struct device *dev, int16_t data)
 {
 	int8_t ret = 0;
 	
@@ -55,9 +55,11 @@ int8_t app_eeprom_write(const struct device *dev, int16_t data[])
 		printk("wrote %zu bytes to address 0x00\n", sizeof(data));
 	}
 	// printing data
-	for (int8_t i = 0; i < MAX_RECORDS; i++) {
-		printk("wrt -> rom val: %d\n", data[i]);
-	}	
+	// for (int8_t i = 0; i < MAX_RECORDS; i++) {
+	// 	printk("wrt -> rom val: %d\n", data[i]);
+	// }
+	printk("wrt -> rom val: %d\n", data);
+
 	return 0;
 }
 

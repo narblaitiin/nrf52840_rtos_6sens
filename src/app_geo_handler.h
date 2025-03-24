@@ -14,6 +14,6 @@
 #include "app_rtc.h"
 
 //  ========== prototypes ==================================================================
-int16_t* app_geo_handler();
+int8_t app_geo_handler();
 
 #endif /* APP_SHT31_ADC_HANDLER_H */

@@ -24,7 +24,7 @@
 
 //  ========== prototypes ==================================================================
 int8_t app_eeprom_init(const struct device *dev);
-int8_t app_eeprom_write(const struct device *dev, int16_t data[]);
+int8_t app_eeprom_write(const struct device *dev, int16_t data);
 int16_t* app_eeprom_read(const struct device *dev);
 
 #endif /* APP_EEPROM_H */

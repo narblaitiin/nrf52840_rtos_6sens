@@ -68,6 +68,7 @@ int8_t main(void)
 		geo_adc = app_nrf52_get_ain0();
 
 		if (geo_adc > THRESHOLD) {
+
 			payload->id = dev_eui;
 			payload->timestamp = app_rtc_get_time (dev);
 
@@ -76,7 +77,9 @@ int8_t main(void)
 			// 	payload->val = app_nrf52_get_ain0();
 			// }
 
-			payload->val = app_geo_handler(dev);
+			(void)app_geo_handler();
+
+			payload->val = app_eeprom_read(dev);
 			
 			gpio_pin_set_dt(&led_tx, 1);
 			ret = lorawan_send(LORAWAN_PORT, payload, sizeof(payload), LORAWAN_MSG_UNCONFIRMED);
