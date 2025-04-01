@@ -7,7 +7,7 @@
 
 #include "app_sht31.h"
 
-//  ======== app_sht31_init ============================================
+//  ========== app_sht31_init ==============================================================
 int8_t app_sht31_init(const struct device *dev)
 {
     // getting sht31 sensor i2c device (SDA: P0.09, SCL:P0.0)
@@ -26,12 +26,13 @@ int8_t app_sht31_init(const struct device *dev)
     return 0;
 }
 
-//  ======== app_sht31_get_temp ========================================
-float app_sht31_get_temp(const struct device *dev)
+//  ========== app_sht31_get_temp ==========================================================
+int16_t app_sht31_get_temp(const struct device *dev)
 {
-    struct sensor_value raw_temp;
-    float temp = 0;
+    struct sensor_value val;
+    int32_t temp = 0;
     int8_t ret = 0;
+    int8_t scale = 100;
 
     // fetching data
 	ret = sensor_sample_fetch(dev);
@@ -41,24 +42,25 @@ float app_sht31_get_temp(const struct device *dev)
     }
 
     // getting channel function
-	ret = sensor_channel_get(dev, SENSOR_CHAN_AMBIENT_TEMP, &raw_temp);
+	ret = sensor_channel_get(dev, SENSOR_CHAN_AMBIENT_TEMP, &val);
     if (ret < 0) {
         printk("can't read sensor channels. error: %d\n", ret);
 	    return 0;
     }
 
-    // convert struct to float : 4 bytes - 7 decimal points
-    temp = sensor_value_to_float(&raw_temp);
-    printk("sht31 temp: %0.2f\n", temp);
-    return temp;
+    // convert struct to int16
+    temp = (val.val1 * scale) + (val.val2 / (1000000)/scale);
+    printk("sht31 temp (int16): %d degree\n", temp);
+    return (int16_t)temp;
 }
 
-//  ======== app_sht31_get_hum =========================================
-float app_sht31_get_hum(const struct device *dev)
+//  ========== app_sht31_get_hum ===========================================================
+int16_t app_sht31_get_hum(const struct device *dev)
 {
-    struct sensor_value raw_hum;
+    struct sensor_value val;
     float hum = 0;
     int8_t ret = 0;
+    int8_t scale = 100;
 
     // fetching data
 	ret = sensor_sample_fetch(dev);
@@ -68,14 +70,14 @@ float app_sht31_get_hum(const struct device *dev)
     }
 
     // getting channel function
-	ret = sensor_channel_get(dev, SENSOR_CHAN_HUMIDITY, &raw_hum);
+	ret = sensor_channel_get(dev, SENSOR_CHAN_HUMIDITY, &val);
     if (ret < 0) {
         printk("can't read sensor channels. error: %d\n", ret);
 	    return 0;
     }
 
-    // conert struct to float : 4 bytes - 7 decimal points
-	hum = sensor_value_to_float(&raw_hum);
-    printk("sht31 humidity: %0.2f %%RH\n", hum);
-    return hum;
+    // convert struct to int16
+    hum = (val.val1 * scale) + (val.val2 / (1000000)/scale);
+    printk("sht31 humidity (int16): %d%%RH\n", hum);
+    return (int16_t)hum;
 }

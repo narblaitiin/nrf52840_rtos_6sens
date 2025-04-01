@@ -17,7 +17,7 @@
 
 //  ========== prototypes ==================================================================
 int8_t app_sht31_init(const struct device *dev);
-float app_sht31_get_temp(const struct device *dev);
-float app_sht31_get_hum(const struct device *dev);
+int16_t app_sht31_get_temp(const struct device *dev);
+int16_t app_sht31_get_hum(const struct device *dev);
 
 #endif /* APP_SHT31_H */
