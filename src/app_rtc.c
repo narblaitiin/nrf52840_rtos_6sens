@@ -29,38 +29,31 @@ int8_t app_rtc_init(const struct device *dev)
 }
 
 //  ========== app_rtc_get_time ============================================================
-int32_t* app_rtc_get_time (const struct device *dev)
+int32_t app_rtc_get_time (const struct device *dev)
 {
     int8_t ret = 0;
-	struct rtc_time time = {
-		.tm_year = 2024 - 1900,
-		.tm_mon = 11 - 1,
-		.tm_mday = 17,
-		.tm_hour = 4,
-		.tm_min = 19,
-		.tm_sec = 0,
-	};
-	int32_t buffer[sizeof(time)];
+	int32_t timestamp = 0;
+	struct rtc_time time = {0};
 
-	ret = rtc_set_time(dev, &time);
-	if (ret < 0) {
-		printk("Cannot write date time: %d\n", ret);
-		return ret;
-	}
-	
+	// convert rtc_time to Unix timestamp (seconds since 1970)
+    struct tm t = {
+        .tm_year = time.tm_year,
+        .tm_mon  = time.tm_mon,
+        .tm_mday = time.tm_mday,
+        .tm_hour = time.tm_hour,
+        .tm_min  = time.tm_min,
+        .tm_sec  = time.tm_sec
+    };
+
     ret = rtc_get_time(dev, &time);
 	if (ret < 0) {
 		printk("cannot read date time: %d\n", ret);
 		return ret;
 	}
 
-	// 	// putting timestamp in fisrt page for this test
- 	memcpy(buffer, &time, sizeof(time));
-	for (int8_t itr = 0; itr < sizeof(buffer); itr) {
-		printk("RTC date and time: %04d-%02d-%02d %02d:%02d:%02d\n", buffer[itr]);
-	}
+	// Convert to Unix timestamp
+	timestamp = (int32_t)mktime(&t);
+	printk("timestamp in unix: %d\n", timestamp);
 
-	// printk("RTC date and time: %04d-%02d-%02d %02d:%02d:%02d\n", time.tm_year + 1900,
-	//        time.tm_mon + 1, time.tm_mday, time.tm_hour, time.tm_min, time.tm_sec);
-    return buffer;
+    return timestamp;
 }

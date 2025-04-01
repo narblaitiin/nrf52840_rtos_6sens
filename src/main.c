@@ -27,13 +27,10 @@ int8_t main(void)
 {
 	const struct device *dev;
 	struct nvs_fs fs;
-	int32_t *timestamp;
 	int16_t geo_adc;
-	uint8_t dev_eui[] = LORAWAN_DEV_EUI;
 	int8_t ret;
 
 	struct data {
-		uint8_t *id;
 		int32_t timestamp;
 		int16_t val;
 	} payload[MAX_SAMPLES]; // just for test
@@ -65,13 +62,7 @@ int8_t main(void)
 
 		if (geo_adc > THRESHOLD) {
 
-			payload->id = dev_eui;
-			payload->timestamp = app_rtc_get_time (dev);
-
-			// putting n structures in fisrt page for this test
-			// for (int8_t i = 0; i < MAX_SAMPLES; i++) {
-			// 	payload->val = app_nrf52_get_ain0();
-			// }
+			payload->timestamp = app_rtc_get_time(dev);
 
 			(void)app_geo_handler();
 

@@ -22,6 +22,6 @@
 
 //  ========== prototypes ==================================================================
 int8_t app_rtc_init(const struct device *dev);
-int32_t* app_rtc_get_time(const struct device *dev);
+int32_t app_rtc_get_time(const struct device *dev);
 
 #endif /* APP_RTC_H */

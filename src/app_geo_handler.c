@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
- #include "app_geo_handler.h"
+#include "app_geo_handler.h"
 
 //  ======== app_geo_handler =======================================
 int8_t app_geo_handler(const struct device *dev)
@@ -22,8 +22,6 @@ int8_t app_geo_handler(const struct device *dev)
 		// writing and reading stored data
 		app_eeprom_write(dev, data);
 	}
-
-	// app_eeprom_read(dev);
 
 	// cleaning data storage partition
 //	(void)flash_erase(dev, SPI_FLASH_OFFSET, sizeof(data));
