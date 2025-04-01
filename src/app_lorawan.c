@@ -52,6 +52,7 @@ int8_t app_lorawan_init(const struct device *dev)
 	app_flash_init_param(&fs, NVS_DEVNONCE_ID, &dev_nonce);
 
 	printk("starting lorawan node\n");
+
     // getting lora sx1276 device
 	dev = DEVICE_DT_GET(DT_ALIAS(lora0));
 	if (!device_is_ready(dev)) {
@@ -60,10 +61,11 @@ int8_t app_lorawan_init(const struct device *dev)
 	}
 
 	printk("starting lorawan stack\n");
+
     // starting device
 	ret = lorawan_set_region(LORAWAN_REGION_EU868);
 	if (ret < 0) {
-		printk("lorawan_set_region failed: %d\n", ret);
+		printk("lorawan_set_region failed. error: %d\n", ret);
 		return 0;
 	}
 
@@ -76,7 +78,7 @@ int8_t app_lorawan_init(const struct device *dev)
 	}
 
 	// enable ADR
-    lorawan_enable_adr(false);
+    lorawan_enable_adr(true);
 
     // enable callbacks
 	struct lorawan_downlink_cb downlink_cb = {
@@ -88,7 +90,6 @@ int8_t app_lorawan_init(const struct device *dev)
 
 	// configuration of lorawan parameters 
     join_cfg.mode = LORAWAN_ACT_OTAA;
-//	join_cfg.mode = LORAWAN_CLASS_A;
 	join_cfg.dev_eui = dev_eui;
 	join_cfg.otaa.join_eui = join_eui;
 	join_cfg.otaa.app_key = app_key;
@@ -120,11 +121,10 @@ int8_t app_lorawan_init(const struct device *dev)
 
 		if (ret < 0) {
 			// if failed, wait before re-trying.
-			k_sleep(DELAY);
+			k_sleep(K_MSEC(10000));
 		}
 	} while (ret != 0);
 
-//	gpio_pin_set_dt(&led_rx, 0);
     return 0;
 }
 
