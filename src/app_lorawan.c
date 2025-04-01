@@ -10,7 +10,6 @@
 
 //  ========== globals =====================================================================
 static const struct gpio_dt_spec led_tx = GPIO_DT_SPEC_GET(LED_TX, gpios);
-static const struct gpio_dt_spec led_rx = GPIO_DT_SPEC_GET(LED_RX, gpios);
 
 // downlink callback
 static void dl_callback(uint8_t port, bool data_pending, int16_t rssi, int8_t snr, uint8_t len, const uint8_t *data)
@@ -40,7 +39,7 @@ int8_t app_lorawan_init(const struct device *dev)
 	static struct nvs_fs fs;
 	uint16_t dev_nonce = 0u;
 
-    int8_t ret = 0;
+    int8_t ret = 0; 
 	int8_t itr = 1;
 	ssize_t err = 0;
 	uint8_t dev_eui[] 	= LORAWAN_DEV_EUI;
@@ -50,6 +49,10 @@ int8_t app_lorawan_init(const struct device *dev)
 	// initialization and reading/writing the devnonce parameter
 	app_flash_init(&fs);
 	app_flash_init_param(&fs, NVS_DEVNONCE_ID, &dev_nonce);
+
+	// configuration of LEDs
+	gpio_pin_configure_dt(&led_tx, GPIO_OUTPUT_ACTIVE);
+	gpio_pin_set_dt(&led_tx, 0);
 
 	printk("starting lorawan node\n");
 
@@ -76,6 +79,8 @@ int8_t app_lorawan_init(const struct device *dev)
 	} else {
 			k_sleep(K_MSEC(500));
 	}
+	// beginning lorawan stack: TX Led is ON
+	gpio_pin_set_dt(&led_tx, 1);
 
 	// enable ADR
     lorawan_enable_adr(true);
@@ -98,7 +103,6 @@ int8_t app_lorawan_init(const struct device *dev)
 
 	do {
 		printk("joining network over OTAA, dev nonce %d, attempt %d\n", join_cfg.otaa.dev_nonce, itr++);
-		gpio_pin_set_dt(&led_rx, 1);
 		ret = lorawan_join(&join_cfg);
 		if (ret < 0) {
 			if ((ret =-ETIMEDOUT)) {
@@ -125,6 +129,8 @@ int8_t app_lorawan_init(const struct device *dev)
 		}
 	} while (ret != 0);
 
+	// end of fuction -> return to main: TX Led is OFF
+	gpio_pin_set_dt(&led_tx, 0);
     return 0;
 }
 
