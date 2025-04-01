@@ -16,13 +16,10 @@ int8_t app_sht31_bat_handler ()
     const struct device *dev;
 
     static const struct gpio_dt_spec led_tx = GPIO_DT_SPEC_GET(LED_TX, gpios);
-    static const struct gpio_dt_spec led_rx = GPIO_DT_SPEC_GET(LED_RX, gpios);
 
     // configuration of LEDs
 	gpio_pin_configure_dt(&led_tx, GPIO_OUTPUT_ACTIVE);
-	gpio_pin_configure_dt(&led_rx, GPIO_OUTPUT_ACTIVE);
 	gpio_pin_set_dt(&led_tx, 0);
-	gpio_pin_set_dt(&led_rx, 0);
 
     // getting all sensor devices
 	dev = DEVICE_DT_GET_ONE(sensirion_sht3xd);
@@ -38,7 +35,7 @@ int8_t app_sht31_bat_handler ()
 
 	gpio_pin_set_dt(&led_tx, 1);
 	ret = lorawan_send(LORAWAN_PORT, (int8_t)payload, sizeof(payload), LORAWAN_MSG_UNCONFIRMED);
-    gpio_pin_set_dt(&led_tx, 0);
+
     if (ret == -EAGAIN) {
         printk("lorawan_send failed: %d. continuing...\n", ret);
         return 0;
@@ -49,7 +46,9 @@ int8_t app_sht31_bat_handler ()
         return 0;
     } else {
         // flashing of the LED when a packet is transmitted
+        ret = gpio_pin_toggle_dt(&led_tx);
         printk("data sent!\n");
     }
+    gpio_pin_set_dt(&led_tx, 0);
     return 0;
 }
