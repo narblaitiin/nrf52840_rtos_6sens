@@ -37,7 +37,7 @@ int8_t app_sht31_bat_handler ()
     printk("sending random data...\n");
 
 	gpio_pin_set_dt(&led_tx, 1);
-	ret = lorawan_send(LORAWAN_PORT, payload, sizeof(payload), LORAWAN_MSG_UNCONFIRMED);
+	ret = lorawan_send(LORAWAN_PORT, (int8_t)payload, sizeof(payload), LORAWAN_MSG_UNCONFIRMED);
     gpio_pin_set_dt(&led_tx, 0);
     if (ret == -EAGAIN) {
         printk("lorawan_send failed: %d. continuing...\n", ret);
