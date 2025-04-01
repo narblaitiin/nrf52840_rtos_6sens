@@ -13,6 +13,7 @@
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/sensor.h>
+#include <stdint.h>
 
 //  ========== prototypes ==================================================================
 int8_t app_sht31_init(const struct device *dev);

@@ -5,13 +5,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include "app_adc.h"
-#include "app_eeprom.h"
-#include "app_flash.h"
+//  ========== includes ====================================================================
 #include "app_geo_handler.h"
-#include "app_lorawan.h"
-#include "app_rtc.h"
-#include "app_sht31.h"
+#include "app_sht31_bat_handler.h"
 
 //  ========== interrupt sub-routine =======================================================
 void adc_work_handler(struct k_work *work_geo)
