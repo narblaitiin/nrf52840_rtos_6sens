@@ -31,7 +31,7 @@ int8_t app_sht31_bat_handler ()
     // initialization of LoRaWAN - TTN
 	app_lorawan_init(dev);
 
-    printk("sending random data...\n");
+    printk("sending converted data...\n");
 
 	gpio_pin_set_dt(&led_tx, 1);
 	ret = lorawan_send(LORAWAN_PORT, (int8_t)payload, sizeof(payload), LORAWAN_MSG_UNCONFIRMED);
@@ -42,7 +42,7 @@ int8_t app_sht31_bat_handler ()
     }
     
     if (ret < 0) {
-        printk("lorawan_send failed: %d.\n", ret);
+        printk("lorawan_send failed. error: %d.\n", ret);
         return 0;
     } else {
         // flashing of the LED when a packet is transmitted
