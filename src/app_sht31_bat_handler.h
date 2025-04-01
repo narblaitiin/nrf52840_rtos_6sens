@@ -14,6 +14,11 @@
 #include "app_lorawan.h"
 #include "app_sht31.h"
 
+//  ========== defines =====================================================================
+/* led control */
+#define LED_TX                  DT_ALIAS(ledtx)      // declared in device tree
+#define LED_RX                  DT_ALIAS(ledrx)
+
 //  ========== prototypes ==================================================================
 int8_t app_sht31_bat_handler();
 
