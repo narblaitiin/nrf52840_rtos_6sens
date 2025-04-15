@@ -8,20 +8,24 @@
 #include "app_adc.h"
 
 //  ========== globals =====================================================================
+// ADC buffer to store raw ADC readings
 int16_t buf0, buf1;
 
+// ADC channel configuration obtained from the device tree
 static const struct adc_dt_spec adc_channel = ADC_DT_SPEC_GET(DT_PATH(zephyr_user));
 
+// ADC sequence configuration to specify the ADC operation
 struct adc_sequence sequence0 = {
         .channels = 0,
 		.buffer = &buf0,
-		.buffer_size = sizeof(buf0), // in bytes
+		.buffer_size = sizeof(buf0),
 };
 
+// ADC sequence configuration to specify the ADC operation
 struct adc_sequence sequence1 = {
     .channels = 1,
     .buffer = &buf1,
-    .buffer_size = sizeof(buf1), // in bytes
+    .buffer_size = sizeof(buf1),
 };
 
 //  ========== app_nrf52_adc_init ==========================================================
@@ -29,27 +33,28 @@ int8_t app_nrf52_adc_init()
 {
     int8_t err;
 
+    // verify if the ADC is ready for operation
     if (!adc_is_ready_dt(&adc_channel)) {
 		printk("ADC is not ready. error: %d\n", err);
 		return 0;
         printk("- found device \"%s\", getting sensor data\n", adc_channel.dev->name);
     }
 
-    // setup ADC channel
+    // configure the ADC channel settings
     err = adc_channel_setup_dt(&adc_channel);
 	if (err < 0) {
 		printk("error: %d. could not setup channel\n", err);
 		return 0;
 	}
 
-    // initializing ADC sequence of ain0 channel (gephone)
+     // initialize the ADC sequence for continuous or single readings (ain0)
     err = adc_sequence_init_dt(&adc_channel, &sequence0);
 	if (err < 0) {
 		printk("error: %d. could not initalize sequnce\n", err);
 		return 0;
 	}
 
-    // initializing ADC sequence of ain1 channel (battery)
+    // initialize the ADC sequence for continuous or single readings (ain1)
     err = adc_sequence_init_dt(&adc_channel, &sequence1);
 	if (err < 0) {
 		printk("error: %d. could not initalize sequnce\n", err);
