@@ -8,20 +8,20 @@
 #include "app_adc.h"
 
 //  ========== globals =====================================================================
-int16_t buf;
+int16_t buf0, buf1;
 
 static const struct adc_dt_spec adc_channel = ADC_DT_SPEC_GET(DT_PATH(zephyr_user));
 
-struct adc_sequence sequence_ain0 = {
+struct adc_sequence sequence0 = {
         .channels = 0,
-		.buffer = &buf,
-		.buffer_size = sizeof(buf), // in bytes
+		.buffer = &buf0,
+		.buffer_size = sizeof(buf0), // in bytes
 };
 
-struct adc_sequence sequence_ain1 = {
+struct adc_sequence sequence1 = {
     .channels = 1,
-    .buffer = &buf,
-    .buffer_size = sizeof(buf), // in bytes
+    .buffer = &buf1,
+    .buffer_size = sizeof(buf1), // in bytes
 };
 
 //  ========== app_nrf52_adc_init ==========================================================
@@ -42,14 +42,15 @@ int8_t app_nrf52_adc_init()
 		return 0;
 	}
 
-    // initializing ADC sequence
-    err = adc_sequence_init_dt(&adc_channel, &sequence_ain0);
+    // initializing ADC sequence of ain0 channel (gephone)
+    err = adc_sequence_init_dt(&adc_channel, &sequence0);
 	if (err < 0) {
 		printk("error: %d. could not initalize sequnce\n", err);
 		return 0;
 	}
 
-    err = adc_sequence_init_dt(&adc_channel, &sequence_ain1);
+    // initializing ADC sequence of ain1 channel (battery)
+    err = adc_sequence_init_dt(&adc_channel, &sequence1);
 	if (err < 0) {
 		printk("error: %d. could not initalize sequnce\n", err);
 		return 0;
@@ -60,50 +61,63 @@ int8_t app_nrf52_adc_init()
 //  ========== app_nrf52_get_ain0 ==========================================================
 int16_t app_nrf52_get_ain0()
 {
-    int16_t val_mv;
+    int16_t velocity;
     int8_t ret;
-
-    val_mv = (int)buf;
-    // reading sample from the ADC
-    ret = adc_read(adc_channel.dev, &sequence_ain0);
-    if (ret < 0 ) {        
-	    printk("sensor sample is not up to date. error: %d\n", ret);
+    
+    // read sample from the ADC
+    ret = adc_read(adc_channel.dev, &sequence0);
+    if (ret < 0) {        
+	    printk("raw adc value is not up to date. error: %d\n", ret);
 	    return 0;
     }
 
-    // geophone sensor level received and converted from channel get
-    // resolution 12bits: 0 to 4095 (uint16)
-    ret = adc_raw_to_millivolts_dt(&adc_channel, &val_mv);
-    if (ret < 0) {
-			printk("value in mV not available. error: %d\n", ret);
-		} else {
-			printk("adc: %d mV\n", val_mv);
-		}
-    return val_mv;
+    printk("raw adc value: %d\n", buf0);
+
+    // convert ADC reading to voltage
+    velocity = (buf0 * ADC_REFERENCE_VOLTAGE) / ADC_RESOLUTION;
+    printk("velocity: %d mV\n", velocity);
+
+    return velocity;
     }
 
 //  ========== app_nrf52_get_ain1 ======================================================
 int16_t app_nrf52_get_ain1()
 {
-    float percent = 0;
+    int16_t percent = 0;
     int8_t ret = 0;
+    int32_t voltage = 0;        // variable to store converted ADC value
 
-    // reading sample from the ADC
-    ret = adc_read(adc_channel.dev, &sequence_ain1);
+    // read sample from the ADC
+    ret = adc_read(adc_channel.dev, &sequence1);
     if (ret < 0 ) {        
-	    printk("nrf52 vbat sample is not up to date. error: %d\n", ret);
+	    printk("raw adc valueis not up to date. error: %d\n", ret);
 	    return 0;
     }
+//    printk("raw adc value: %d\n", buf1);
 
-    // battery level received and converted from channel get
-    // resolution 12bits: 0 to 4095 (uint16)
-    ret = (adc_raw_to_millivolts_dt(&adc_channel, &buf))/1000;
-    if (ret < 0) {
-			printk("value in mV not available. error: %d\n", ret);
-		} else {
-			printk("vbat: %d mV\n", buf);
-		}
-    // quadratic curve fit of lipo voltage measurement
-    percent= (-2.281*pow(10,2)*buf) + (2.066*pow(10,3)*buf) - (4.57*pow(10,3)*buf);
+    // convert ADC reading to voltage
+    voltage = (buf1 * ADC_REFERENCE_VOLTAGE) / ADC_RESOLUTION;
+//    printk("convert voltage: %d mV\n", voltage);
+
+    // ensure voltage is within range
+    if (voltage > BATTERY_MAX_VOLTAGE) voltage = BATTERY_MAX_VOLTAGE;
+    if (voltage < BATTERY_MIN_VOLTAGE) voltage = BATTERY_MIN_VOLTAGE + 1;
+//    printk("clamped voltage: %d mV\n", voltage);
+
+    // non-linear scaling
+    int32_t range = BATTERY_MAX_VOLTAGE - BATTERY_MIN_VOLTAGE;
+    int32_t difference = voltage - BATTERY_MIN_VOLTAGE;
+
+    if (range > 0 && difference > 0) {
+        // use power scaling: percentage = ((difference / range) ^ 1.5) * 100
+        double normalized = (double)difference / range;  // normalize to range [0, 1]
+        double scaled = pow(normalized, 1.5);            // apply non-linear scaling
+        percent = (int16_t)(scaled * 100);               // convert to percentage
+    } else {
+        printk("error: invalid range or difference.\n");
+        percent = 0;
+    }
+
+//    printk("battery level (non-linear, int16): %d%%\n", percent);
     return percent;
 }

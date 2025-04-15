@@ -10,17 +10,17 @@
 #include "app_sht31_bat_handler.h"
 
 //  ========== interrupt sub-routine =======================================================
-void adc_work_handler(struct k_work *work_geo)
+void thb_work_handler(struct k_work *work_thb)
 {
 	app_sht31_bat_handler();
 }
-K_WORK_DEFINE(geo_work, adc_work_handler);
+K_WORK_DEFINE(thb_work, thb_work_handler);
 
-void adc_timer_handler(struct k_timer *timer)
+void thb_timer_handler(struct k_timer *timer)
 {
-	k_work_submit(&geo_work);
+	k_work_submit(&thb_work);
 }
-K_TIMER_DEFINE(adc_timer, adc_timer_handler, NULL);
+K_TIMER_DEFINE(thb_timer, thb_timer_handler, NULL);
 
 //  ========== main ========================================================================
 int8_t main(void)
@@ -45,46 +45,49 @@ int8_t main(void)
 	gpio_pin_set_dt(&led_rx, 0);
 
 	// initialization of all devices
-	app_sht31_init(dev);
-	app_eeprom_init(dev);
-	app_rtc_init(dev);
+	ret = app_nrf52_adc_init();
+	ret = app_sht31_init(dev);
+	ret = app_flash_init(&fs);
+	// ret = app_eeprom_init(dev);;
+	// ret = app_rtc_init(dev);
 
 	// initialization of LoRaWAN
-	app_lorawan_init(dev);
+	ret = app_lorawan_init(dev);
 
 	printk("Geophone Measurement and Process Information\nBoard: %s\n", CONFIG_BOARD);
 	
 	// beginning of isr timer
-	k_timer_start(&adc_timer, K_NO_WAIT, K_MINUTES(15));
+	k_timer_start(&thb_timer, K_NO_WAIT, K_MINUTES(1));
 
-	while(1) {
-		geo_adc = app_nrf52_get_ain0();
+	// while(1) {
+	// 	geo_adc = app_nrf52_get_ain0();
 
-		if (geo_adc > THRESHOLD) {
+	// 	if (geo_adc > THRESHOLD) {
 
-			payload->timestamp = app_rtc_get_time(dev);
+	// 		payload->timestamp = app_rtc_get_time(dev);
 
-			(void)app_geo_handler();
+	// 		ret = app_geo_handler();
 
-			payload->val = app_eeprom_read(dev);
+	// 		payload->val = app_eeprom_read(dev);
 			
-			gpio_pin_set_dt(&led_tx, 1);
-			ret = lorawan_send(LORAWAN_PORT, payload, sizeof(payload), LORAWAN_MSG_UNCONFIRMED);
-			gpio_pin_set_dt(&led_tx, 0);
+	// 		gpio_pin_set_dt(&led_tx, 1);
+	// 		ret = lorawan_send(LORAWAN_PORT, payload, sizeof(payload), LORAWAN_MSG_UNCONFIRMED);
+	// 		gpio_pin_set_dt(&led_tx, 0);
 
-			if (ret == -EAGAIN) {
-				printk("lorawan_send failed: %d. continuing...\n", ret);
-				return 0;
-			}
+	// 		if (ret == -EAGAIN) {
+	// 			printk("lorawan_send failed: %d. continuing...\n", ret);
+	// 			return 0;
+	// 		}
 			
-			if (ret < 0) {
-				printk("lorawan_send failed: %d.\n", ret);
-				return 0;
-			} else {
-				// flashing of the LED when a packet is transmitted
-				printk("data sent!\n");
-			}
-		}
-	}
+	// 		if (ret < 0) {
+	// 			printk("lorawan_send failed: %d.\n", ret);
+	// 			return 0;
+	// 		} else {
+	// 			// flashing of the LED when a packet is transmitted
+	// 			printk("data sent!\n");
+	// 		}
+	// 	}
+	// 	k_sleep(K_MSEC(5));		// 20Hz-100Hz -> shannon frequency: 200Hz
+	// }
 	return 0;
 }
