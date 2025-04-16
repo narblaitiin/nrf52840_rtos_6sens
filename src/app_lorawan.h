@@ -30,5 +30,8 @@
 
 //  ========== prototypes ==================================================================
 int8_t app_lorawan_init(const struct device *dev);
+int lorawan_start_tx(void);
+void lorawan_trigger_tx(void);
+static void lorawan_thread(void *arg1, void *arg2, void *arg3);
 
 #endif /* APP_LORAWAN_H */
