@@ -27,8 +27,9 @@ int8_t main(void)
 {
 	const struct device *dev;
 	struct nvs_fs fs;
-	int16_t geo_adc;
+	float sensor;
 	int8_t ret;
+	int16_t sens_samples[MAX_SAMPLES];
 
 	struct data {
 		int32_t timestamp;
@@ -48,8 +49,8 @@ int8_t main(void)
 	ret = app_nrf52_adc_init();
 	ret = app_sht31_init(dev);
 	ret = app_flash_init(&fs);
-	// ret = app_eeprom_init(dev);;
-	// ret = app_rtc_init(dev);
+	ret = app_eeprom_init(dev);;
+	ret = app_rtc_init(dev);
 
 	// initialization of LoRaWAN
 	ret = app_lorawan_init(dev);
@@ -57,37 +58,12 @@ int8_t main(void)
 	printk("Geophone Measurement and Process Information\nBoard: %s\n", CONFIG_BOARD);
 	
 	// beginning of isr timer
-	k_timer_start(&thb_timer, K_NO_WAIT, K_MINUTES(1));
+//	k_timer_start(&thb_timer, K_NO_WAIT, K_MINUTES(30));
 
-	// while(1) {
-	// 	geo_adc = app_nrf52_get_ain0();
+	while(1) {
 
-	// 	if (geo_adc > THRESHOLD) {
-
-	// 		payload->timestamp = app_rtc_get_time(dev);
-
-	// 		ret = app_geo_handler();
-
-	// 		payload->val = app_eeprom_read(dev);
-			
-	// 		gpio_pin_set_dt(&led_tx, 1);
-	// 		ret = lorawan_send(LORAWAN_PORT, payload, sizeof(payload), LORAWAN_MSG_UNCONFIRMED);
-	// 		gpio_pin_set_dt(&led_tx, 0);
-
-	// 		if (ret == -EAGAIN) {
-	// 			printk("lorawan_send failed: %d. continuing...\n", ret);
-	// 			return 0;
-	// 		}
-			
-	// 		if (ret < 0) {
-	// 			printk("lorawan_send failed: %d.\n", ret);
-	// 			return 0;
-	// 		} else {
-	// 			// flashing of the LED when a packet is transmitted
-	// 			printk("data sent!\n");
-	// 		}
-	// 	}
-	// 	k_sleep(K_MSEC(5));		// 20Hz-100Hz -> shannon frequency: 200Hz
-	// }
+		ret = app_geo_handler();
+		k_sleep(K_MSEC(5));		// 20Hz-100Hz -> shannon frequency: 200Hz
+	}
 	return 0;
 }

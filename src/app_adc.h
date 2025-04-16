@@ -19,7 +19,6 @@
 #define ADC_RESOLUTION              4096    // 12-bit resolution
 #define BATTERY_MAX_VOLTAGE         4200
 #define BATTERY_MIN_VOLTAGE         2900
-#define THRESHOLD                   3       // 
 
 //  ========== prototypes ==================================================================
 int8_t app_nrf52_adc_init();

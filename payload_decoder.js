@@ -1,13 +1,6 @@
 function decodeUplink(input) {
-    // extract the raw bytes from the input payload
+    // input payload is an array of bytes (e.g., input.bytes)
     var bytes = input.bytes;
-
-    // ensure payload has the expected length (8 bytes for 4 int16 values)
-    if (bytes.length !== 8) {
-        return {
-            warnings: ["payload length is not 6 bytes as expected."],
-        };
-    }
 
     // decode the int16 values (big-endian representation)
     var battery = (bytes[0] << 8) | bytes[1];       // first 2 bytes
@@ -19,7 +12,7 @@ function decodeUplink(input) {
     if (battery & 0x8000) battery -= 0x10000;
     if (temperature & 0x8000) temperature -= 0x10000;
     if (humidity & 0x8000) humidity -= 0x10000;
-    if (velicity & 0x8000) velocity -= 0x10000;
+    if (velocity & 0x8000) velocity -= 0x10000;
 
     // return decoded values as JSON
     return {
