@@ -25,20 +25,16 @@ int8_t app_eeprom_init(const struct device *dev)
 		printk("eeprom is not ready\n");
 		return 0;
 	} else {
-        printk("- found device \"%s\", writing/reading data\n", dev->name);
+        printk("- found device \"%s\"\n", dev->name);
     }
 
-	// getting the total number of flash pages in bytes
-	page = flash_get_page_count(dev);
-	printk("number of pages: %zu\n", page);
-
 	// cleaning data storage partition
-	ret = flash_erase(dev, SPI_FLASH_OFFSET, SPI_FLASH_SECTOR_SIZE*SPI_FLASH_SECTOR_NB);
-	if (ret != 0){
-		printf("MX25R64 flash erase failed. error: %d ", ret);
-	} else {
-		printk("MX25R64 flash erase succeeded", size);
-	}
+	// ret = flash_erase(dev, SPI_FLASH_OFFSET, SPI_FLASH_SECTOR_SIZE*SPI_FLASH_SECTOR_NB);
+	// if (ret != 0){
+	// 	printf("MX25R64 flash erase failed. error: %d ", ret);
+	// } else {
+	// 	printk("MX25R64 flash erase succeeded", size);
+	// }
 	return 0;
 }
 

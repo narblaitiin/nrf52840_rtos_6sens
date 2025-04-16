@@ -15,7 +15,7 @@ int8_t app_rtc_init(const struct device *dev)
     // getting ds3231 rtc i2c device (SDA: P0.09, SCL:P0.0)
     dev = DEVICE_DT_GET_ONE(maxim_ds3231);
     if (dev == 0) {
-        printk("error: no =rtc device found\n");
+        printk("error: no rtc device found\n");
 		return 0;
 	}
 
@@ -23,7 +23,7 @@ int8_t app_rtc_init(const struct device *dev)
 		printk("error: rtc is not ready\n");
 		return 0;
 	} else {
-        printk("- found device \"%s\", getting rtc data\n", dev->name);
+        printk("- found device \"%s\"\n", dev->name);
     }
     return 0;
 }

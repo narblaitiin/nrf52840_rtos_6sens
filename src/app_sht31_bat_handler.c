@@ -28,10 +28,10 @@ int8_t app_sht31_bat_handler()
     // get sensor device
 	dev = DEVICE_DT_GET_ONE(sensirion_sht3xd);
     raw_payload[0] = app_nrf52_get_ain1();
-    printk("battery level (int16): %d%%\n", raw_payload[0]);
+    printk("battery level (int16): %d\n", raw_payload[0]);
 
     raw_payload[1] = app_sht31_get_temp(dev);
-    printk("sht31 Temperature (int16): %d\n", raw_payload[1]);
+    printk("sht31 temperature (int16): %d\n", raw_payload[1]);
 
     k_msleep(2000);		// small delay  between reading
     raw_payload[2] = app_sht31_get_hum(dev);
@@ -49,7 +49,7 @@ int8_t app_sht31_bat_handler()
 	gpio_pin_toggle_dt(&led_tx);
     gpio_pin_toggle_dt(&led_rx);
 
-	ret = lorawan_send(LORAWAN_PORT, byte_payload, sizeof(byte_payload), LORAWAN_MSG_CONFIRMED);
+	ret = lorawan_send(LORAWAN_PORT, byte_payload, sizeof(byte_payload), LORAWAN_MSG_UNCONFIRMED);
 
     if (ret == -EAGAIN) {
         printk("lorawan_send failed: %d. continuing...\n", ret);

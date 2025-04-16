@@ -23,7 +23,7 @@ int8_t app_flash_init(struct nvs_fs *fs)
 		printk("flash device \"%s\" is not ready\n", fs->flash_device->name);
 		return 0;
 	} else {
-		printk("- found device: \"%s\", getting nvs memory\n", fs->flash_device->name);
+		printk("- found device: \"%s\"\n", fs->flash_device->name);
 	}
 
 	// set the offset of the NVS partition in flash memory
@@ -44,7 +44,6 @@ int8_t app_flash_init(struct nvs_fs *fs)
 		printk("invalid sector size\n");
 		return -1;
 	}
-	printk("sector size: %d\n", info.size);
 
 	// mount the NVS partition on the flash memory
 	fs->sector_count = 4U;		 // number of sectors allocated to the NVS partition
@@ -53,7 +52,6 @@ int8_t app_flash_init(struct nvs_fs *fs)
 		printk("flash to initialize flash memory. error: %d\n", ret);
 		return 0;
 	}
-
 	return 0;
 }
 

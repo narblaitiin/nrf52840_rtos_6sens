@@ -9,14 +9,14 @@
 
 //  ========== globals =====================================================================
 // ADC buffer to store raw ADC readings
-int16_t buffer;
+static int16_t buffer;
 static uint16_t adc_buffer[ADC_BUFFER_SIZE];
 
 // ADC channel configuration obtained from the device tree
 static const struct adc_dt_spec adc_channel = ADC_DT_SPEC_GET(DT_PATH(zephyr_user));
 
 // ADC sequence configuration to specify the ADC operation
-struct adc_sequence sequence1 = {
+static struct adc_sequence sequence1 = {
     .channels = BIT(1),
     .buffer = &buffer,
     .buffer_size = sizeof(buffer),
@@ -46,7 +46,8 @@ int8_t app_nrf52_adc_init()
     if (!adc_is_ready_dt(&adc_channel)) {
 		printk("ADC is not ready. error: %d\n", err);
 		return 0;
-        printk("- found device \"%s\", getting sensor data\n", adc_channel.dev->name);
+	} else {
+        printk("- found device \"%s\"\n", adc_channel.dev->name);
     }
 
     // configure the ADC channel settings
@@ -82,7 +83,7 @@ int16_t app_nrf52_get_ain1()
     // read sample from the ADC
     ret = adc_read(adc_channel.dev, &sequence1);
     if (ret < 0 ) {        
-	    printk("raw adc valueis not up to date. error: %d\n", ret);
+	    printk("raw adc values is not up to date. error: %d\n", ret);
 	    return 0;
     }
 //    printk("raw adc value: %d\n", buf1);

@@ -23,7 +23,7 @@ int8_t app_sht31_init(const struct device *dev)
 		printk("error: sht31 is not ready\n");
 		return 0;
 	} else {
-        printk("- found device \"%s\", getting sht31 data\n", dev->name);
+        printk("- found device \"%s\"\n", dev->name);
     }
     return 0;
 }
@@ -56,7 +56,7 @@ int16_t app_sht31_get_temp(const struct device *dev)
     temp = (val.val1 * TEMP_SCALE) + ((int64_t)val.val2 * TEMP_SCALE / 1000000);
 
     // print the temperature value with two decimal places
-    printk("SHT31 temperature: %d.%02d °C\n", temp / TEMP_SCALE, temp % TEMP_SCALE);
+    // printk("SHT31 temperature: %d.%02d °C\n", temp / TEMP_SCALE, temp % TEMP_SCALE);
     
     return (int16_t)temp;
 }
@@ -90,7 +90,7 @@ int16_t app_sht31_get_hum(const struct device *dev)
     hum = (val.val1 * HUM_SCALE) + ((int64_t)val.val2 * HUM_SCALE / 1000000);
 
     // print the humifity value with two decimal places
-    printk("sht31 humidity: %d.%02d %%RH\n", hum / HUM_SCALE, hum % HUM_SCALE);
+    // printk("sht31 humidity: %d.%02d %%RH\n", hum / HUM_SCALE, hum % HUM_SCALE);
     
     return (int16_t)hum;
 }

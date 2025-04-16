@@ -28,32 +28,22 @@ int8_t main(void)
 	const struct device *dev;
 	struct nvs_fs fs;
 
-	static const struct gpio_dt_spec led_tx = GPIO_DT_SPEC_GET(LED_TX, gpios);
-    static const struct gpio_dt_spec led_rx = GPIO_DT_SPEC_GET(LED_RX, gpios);
-
-    // configuration of LEDs
-	gpio_pin_configure_dt(&led_tx, GPIO_OUTPUT_ACTIVE);
-	gpio_pin_configure_dt(&led_rx, GPIO_OUTPUT_ACTIVE);
-	gpio_pin_set_dt(&led_tx, 0);
-	gpio_pin_set_dt(&led_rx, 0);
-
-	// initialization of all devices
+	printk("Initializtion of all Hardware Devices\n");
 	app_nrf52_adc_init();
 	app_sht31_init(dev);
 	app_flash_init(&fs);
 	app_eeprom_init(dev);;
 	app_rtc_init(dev);
 
-	// initialization of LoRaWAN
+	printk("Initialization of LoRaWAN\n");
 	app_lorawan_init(dev);
 
-	printk("Geophone Measurement and Process Information\nBoard: %s\n", CONFIG_BOARD);
-
+	printk("Geophone Measurement and Process Information\n");
 	// start ADC sampling and STA/LTA threads
-	adc_sampling_start();
-    sta_lta_start();
+//	adc_sampling_start();
+//  sta_lta_start();
 
-//	k_timer_start(&thb_timer, K_NO_WAIT, K_MINUTES(30));
+//	k_timer_start(&thb_timer, K_NO_WAIT, K_MINUTES(1));
 
 	return 0;
 }
