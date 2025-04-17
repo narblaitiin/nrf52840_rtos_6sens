@@ -12,13 +12,11 @@
 #include <zephyr/kernel.h>
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
-#include <zephyr/drivers/flash.h>
+#include <zephyr/drivers/eeprom.h>
 
 //  ========== defines =====================================================================
 #define SPI_FLASH_DEVICE        DT_COMPAT_GET_ANY_STATUS_OKAY(nordic_qspi_nor)
 #define SPI_FLASH_OFFSET		0x00000
-#define SPI_FLASH_SECTOR_SIZE	4096
-#define SPI_FLASH_SECTOR_NB     2048
 #define MAX_RECORDS             65534   // samples (2 bytes) + timestamp (4 bytes)                   
 
 //  ========== prototypes ==================================================================

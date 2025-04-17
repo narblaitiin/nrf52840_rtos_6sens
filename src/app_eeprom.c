@@ -28,13 +28,6 @@ int8_t app_eeprom_init(const struct device *dev)
         printk("- found device \"%s\"\n", dev->name);
     }
 
-	// cleaning data storage partition
-	// ret = flash_erase(dev, SPI_FLASH_OFFSET, SPI_FLASH_SECTOR_SIZE*SPI_FLASH_SECTOR_NB);
-	// if (ret != 0){
-	// 	printf("MX25R64 flash erase failed. error: %d ", ret);
-	// } else {
-	// 	printk("MX25R64 flash erase succeeded", size);
-	// }
 	return 0;
 }
 
@@ -44,16 +37,13 @@ int8_t app_eeprom_write(const struct device *dev, int16_t data)
 	int8_t ret = 0;
 	
 	// writing data in the first page of 4kbytes
-	ret = flash_write(dev, SPI_FLASH_OFFSET, &data, sizeof(data));
+	ret = eeprom_write(dev, SPI_FLASH_OFFSET, &data, sizeof(data));
 	if (ret!=0) {
 		printk("error writing data. error: %d\n", ret);
 	} else {
-		printk("wrote %zu bytes to address 0x00\n", sizeof(data));
+	//	printk("wrote %zu bytes to address 0x00\n", sizeof(data));
 	}
 	// printing data
-	// for (int8_t i = 0; i < MAX_RECORDS; i++) {
-	// 	printk("wrt -> rom val: %d\n", data[i]);
-	// }
 	printk("write -> rom val: %d\n", data);
 
 	return 0;
@@ -66,11 +56,11 @@ int16_t* app_eeprom_read(const struct device *dev)
 	int16_t data[MAX_RECORDS];
 
 	// reading the first page
-	ret = flash_read(dev, SPI_FLASH_OFFSET, &data, sizeof(data));
+	ret = eeprom_read(dev, SPI_FLASH_OFFSET, &data, sizeof(data));
 	if (ret) {
 		printk("error reading data. error: %d\n", ret);
 	} else {
-		printk("read %zu bytes from address 0x00\n", sizeof(data));
+	//	printk("read %zu bytes from address 0x00\n", sizeof(data));
 	}
 
 	// reading data
