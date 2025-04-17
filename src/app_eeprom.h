@@ -19,8 +19,7 @@
 #define SPI_FLASH_OFFSET		0x00000
 #define SPI_FLASH_SECTOR_SIZE	4096
 #define SPI_FLASH_SECTOR_NB     2048
-#define MAX_SAMPLES             120 // 1 sample: 34 bytes -> 120 samples/sectors
-#define MAX_RECORDS             2   // 120 samples - 2048 sectors                         
+#define MAX_RECORDS             65534   // samples (2 bytes) + timestamp (4 bytes)                   
 
 //  ========== prototypes ==================================================================
 int8_t app_eeprom_init(const struct device *dev);

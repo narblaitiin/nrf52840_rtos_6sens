@@ -54,7 +54,7 @@ int8_t app_eeprom_write(const struct device *dev, int16_t data)
 	// for (int8_t i = 0; i < MAX_RECORDS; i++) {
 	// 	printk("wrt -> rom val: %d\n", data[i]);
 	// }
-	printk("wrt -> rom val: %d\n", data);
+	printk("write -> rom val: %d\n", data);
 
 	return 0;
 }
@@ -75,7 +75,7 @@ int16_t* app_eeprom_read(const struct device *dev)
 
 	// reading data
 	for (int8_t i = 0; i < MAX_RECORDS; i++) {
-		printk("rd -> rom val: %d\n", data[i]);
+		printk("read -> rom val: %d\n", data[i]);
 	}
 	return data;
 }
