@@ -51,7 +51,7 @@ int32_t app_rtc_get_time (const struct device *dev)
 		return ret;
 	}
 
-	// Convert to Unix timestamp
+	// convert to Unix timestamp
 	timestamp = (int32_t)mktime(&t);
 	printk("timestamp in unix: %d\n", timestamp);
 
