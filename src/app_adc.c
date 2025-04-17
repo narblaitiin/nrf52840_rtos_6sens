@@ -22,19 +22,32 @@ static struct adc_sequence sequence1 = {
     .buffer_size = sizeof(buffer),
 };
 
+// ADC sequence configuration to specify the ADC operation
 static struct adc_sequence sequence0 = {
     .channels    = BIT(0),
     .buffer      = adc_buffer,
     .buffer_size = sizeof(adc_buffer),
 };
 
+// define a stack for the ADC thread, with a size of 1024 bytes
 K_THREAD_STACK_DEFINE(adc_stack, 1024);
+
+// structure to hold ADC thread data
 struct k_thread adc_thread_data;
+
+// mutex to manage concurrent access to the ADC ring buffer
 K_MUTEX_DEFINE(buffer_lock);
+
+// mutex to manage access to buffers when retrieving ADC data
 K_MUTEX_DEFINE(get_buffer_lock);
+
+// semaphore to signal when new ADC data is available
 K_SEM_DEFINE(data_ready_sem, 0, 1);
 
+// define a ring buffer to store ADC samples
 static uint16_t ring_buffer[ADC_BUFFER_SIZE];
+
+// index to track the head of the ring buffer
 static int ring_head = 0;
 
 //  ========== app_nrf52_adc_init ==========================================================
@@ -128,17 +141,21 @@ static void adc_thread(void *arg1, void *arg2, void *arg3) {
             k_mutex_unlock(&buffer_lock);
             k_sem_give(&data_ready_sem);
         }
-        k_sleep(K_MSEC(1)); // Adjust for sampling rate
+        k_sleep(K_MSEC(5)); // adjust for sampling rate - Fs=200Hz
     }
 }
 
 //  ========== adc_sampling_start ==========================================================
+// start the ADC sampling thread
+// the thread reads data from the ADC and stores it in a ring buffer
 void adc_sampling_start(void) {
     k_thread_create(&adc_thread_data, adc_stack, K_THREAD_STACK_SIZEOF(adc_stack),
                     adc_thread, NULL, NULL, NULL, 1, 0, K_NO_WAIT);
 }
 
 //  ========== adc_get_buffer ==============================================================
+// copie a portion of the ADC ring buffer to a user-supplied buffer.
+// use a mutex to ensure thread-safe access.
 void adc_get_buffer(uint16_t *dest, size_t size, int offset) {
     k_mutex_lock(&buffer_lock, K_FOREVER);
     int start_idx = (ring_head + offset + ADC_BUFFER_SIZE) % ADC_BUFFER_SIZE;
@@ -146,6 +163,5 @@ void adc_get_buffer(uint16_t *dest, size_t size, int offset) {
     for (size_t i = 0; i < size; i++) {
         dest[i] = ring_buffer[(start_idx + i) % ADC_BUFFER_SIZE];
     }
-
     k_mutex_unlock(&buffer_lock);
 }

@@ -29,7 +29,6 @@ extern struct k_sem data_ready_sem;
 //  ========== prototypes ==================================================================
 int8_t app_nrf52_adc_init();
 int16_t app_nrf52_get_ain1();
-int adc_sampling_init(void);
 void adc_sampling_start(void);
 void adc_get_buffer(uint16_t *dest, size_t size, int offset);
 void sta_lta_start(void);
