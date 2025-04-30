@@ -8,6 +8,7 @@
 //  ========== includes ====================================================================
 #include "app_sht31_bat_handler.h"
 #include "app_adc.h"
+#include "app_eeprom.h"
 
 //  ========== interrupt sub-routine =======================================================
 void thb_work_handler(struct k_work *work_thb)
@@ -26,17 +27,45 @@ K_TIMER_DEFINE(thb_timer, thb_timer_handler, NULL);
 int8_t main(void)
 {
 	const struct device *dev;
-	struct nvs_fs fs;
+	struct nvs_fs flash;
 
 	printk("Initializtion of all Hardware Devices\n");
-	app_nrf52_adc_init();
-	app_sht31_init(dev);
-	app_flash_init(&fs);
-	app_eeprom_init(dev);;
-	app_rtc_init(dev);
 
-	printk("Initialization of LoRaWAN\n");
-	app_lorawan_init(dev);
+	// initialize ADC device
+	int8_t ret = app_nrf52_adc_init();
+	if (ret != 1) {
+		printk("failed to initialize ADC device");
+		return 0;
+	}
+
+	// initialize flash memory
+	ret = app_flash_init(&flash);
+	if (ret != 1) {
+		printk("failed to initialize ADC device");
+		return 0;
+	}
+
+	// initialize the EEPROM device
+	const struct device *flash_dev = DEVICE_DT_GET(SPI_FLASH_DEVICE);
+	ret = app_eeprom_init(flash_dev);
+	if (ret != 1) {
+		printk("failed to initialize QSPI Flash device\n");
+		return 0;
+	}
+
+	// initialize DS3231 RTC device via I2C (Pins: SDA -> P0.09, SCL -> P0.0)
+	const struct device *rtc_dev = app_rtc_init();
+    if (!rtc_dev) {
+        printk("failed to initialize RTC device\n");
+        return 0;
+    }
+
+	// initialize LoRaWAN protocol and register the device
+	ret = app_lorawan_init();
+	if (ret != 1) {
+		printk("failed to initialze LoRaWAN protocol\n");
+		return 0;
+	}
 
 	printk("Geophone Measurement and Process Information\n");
 	// start ADC sampling and STA/LTA threads

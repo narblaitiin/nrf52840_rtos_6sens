@@ -26,8 +26,9 @@ static void lorawan_thread(void *arg1, void *arg2, void *arg3) {
     // initialize DS3231 RTC device via I2C (Pins: SDA -> P0.09, SCL -> P0.0)
     const struct device *rtc = DEVICE_DT_GET_ONE(maxim_ds3231);
 
-    // retrieve the current timestamp from the RTC device    
-    int32_t timestamp = app_rtc_get_time (rtc);
+    // retrieve the current timestamp from the RTC device 
+    struct tm current_time;  
+    int32_t timestamp = app_rtc_get_time(rtc, &current_time);
 
     // add the timestamp to the start of the data buffer
     data[0] = (timestamp >> 24) & 0xFF; // most significant byte

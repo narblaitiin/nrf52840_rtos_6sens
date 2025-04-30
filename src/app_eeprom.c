@@ -28,7 +28,7 @@ int8_t app_eeprom_init(const struct device *dev)
         printk("- found device \"%s\"\n", dev->name);
     }
 
-	return 0;
+	return 1;
 }
 
 //  ========== app_eeprom_write ============================================================

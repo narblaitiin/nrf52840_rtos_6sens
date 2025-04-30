@@ -29,7 +29,7 @@
 #define MAX_JOIN_ATTEMPTS       10      // limiting join attempts
 
 //  ========== prototypes ==================================================================
-int8_t app_lorawan_init(const struct device *dev);
+int8_t app_lorawan_init(void);
 int lorawan_start_tx(void);
 void lorawan_trigger_tx(void);
 static void lorawan_thread(void *arg1, void *arg2, void *arg3);

@@ -34,15 +34,13 @@ static void lorwan_datarate_changed(enum lorawan_datarate dr)
 }
 
 //  ========== app_loarwan_init ============================================================
-int8_t app_lorawan_init(const struct device *dev)
+int8_t app_lorawan_init(void)
 {
 	struct lorawan_join_config join_cfg;
 	static struct nvs_fs fs;
 	uint16_t dev_nonce = 0u;
 
-    int8_t ret = 0;
 	int8_t itr = 1;
-	ssize_t err = 0;
 	uint8_t dev_eui[] 	= LORAWAN_DEV_EUI;
 	uint8_t join_eui[]	= LORAWAN_JOIN_EUI;
 	uint8_t app_key[]	= LORAWAN_APP_KEY;
@@ -51,19 +49,19 @@ int8_t app_lorawan_init(const struct device *dev)
 	app_flash_init(&fs);
 	app_flash_init_param(&fs, NVS_DEVNONCE_ID, &dev_nonce);
 
-	printk("starting lorawan node initialization\n");
+	printk("starting LoRaWAN node initialization\n");
 
     // retrieve the LoRa SX1276 device
-	dev = DEVICE_DT_GET(DT_ALIAS(lora0));
-	if (!device_is_ready(dev)) {
-		printk("%s: lorawan device not ready\n", dev->name);
+	const struct device *lora_dev = DEVICE_DT_GET(DT_ALIAS(lora0));
+	if (!device_is_ready(lora_dev)) {
+		printk("%s: LoRaWAN device not ready\n", lora_dev->name);
 		return 0;
 	}
 
-	printk("starting lorawan stack\n");
+	printk("starting LoRaWAN stack\n");
 
     // set the region (Europe)
-	ret = lorawan_set_region(LORAWAN_REGION_EU868);
+	int8_t ret = lorawan_set_region(LORAWAN_REGION_EU868);
 	if (ret < 0) {
 		printk("failed to start LoRaWAN stack. error: %d\n", ret);
 		return 0;
@@ -75,7 +73,7 @@ int8_t app_lorawan_init(const struct device *dev)
 	// start the LoRaWAN stack
 	ret = lorawan_start();
 	if (ret < 0) {
-		printk("failed to start lorawan stack. error: %d\n", ret);
+		printk("failed to start LoRaWAN stack. error: %d\n", ret);
 		return 0;
 	} else {
 			// allow some time for the stack to stabilize
@@ -111,9 +109,9 @@ int8_t app_lorawan_init(const struct device *dev)
 		ret = lorawan_join(&join_cfg);
 		if (ret < 0) {
 			if (ret == -ETIMEDOUT) {
-				printk("join request timed out. Retrying...\n");
+				printk("join request timed out. retrying...\n");
 			} else {
-				printk("failed to join network. Error: %d\n", ret);
+				printk("failed to join network. error: %d\n", ret);
 			}
 		} else {
 			printk("successfully joined LoRaWAN network using OTAA.\n");
@@ -124,7 +122,7 @@ int8_t app_lorawan_init(const struct device *dev)
 		join_cfg.otaa.dev_nonce = dev_nonce;
 
 		// save value away in Non-Volatile Storage.
-		err = nvs_write(&fs, NVS_DEVNONCE_ID, &dev_nonce, sizeof(dev_nonce));
+		ssize_t err = nvs_write(&fs, NVS_DEVNONCE_ID, &dev_nonce, sizeof(dev_nonce));
 		if (err < 0) {
 			printk("NVS: failed to write dev_nonce (id %d). error: %d\n", NVS_DEVNONCE_ID, err);
 		}
@@ -140,5 +138,6 @@ int8_t app_lorawan_init(const struct device *dev)
 	gpio_pin_set_dt(&led_tx, 0);
 	gpio_pin_set_dt(&led_rx, 0);
 	
-    return 0;
+    return 1;
 }
+

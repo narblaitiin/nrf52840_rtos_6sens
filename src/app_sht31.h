@@ -20,7 +20,6 @@
 #define HUM_SCALE   100     // scale for converting to int16_t
 
 //  ========== prototypes ==================================================================
-int8_t app_sht31_init(const struct device *dev);
 int16_t app_sht31_get_temp(const struct device *dev);
 int16_t app_sht31_get_hum(const struct device *dev);
 

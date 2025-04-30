@@ -52,7 +52,7 @@ int8_t app_flash_init(struct nvs_fs *fs)
 		printk("flash to initialize flash memory. error: %d\n", ret);
 		return 0;
 	}
-	return 0;
+	return 1;
 }
 
 //  ========== app_flash_init_param ========================================================

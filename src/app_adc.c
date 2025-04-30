@@ -83,18 +83,16 @@ int8_t app_nrf52_adc_init()
 		printk("error: %d. could not initalize sequnce\n", err);
 		return 0;
 	}
-    return 0;
+    return 1;
 }
 
 //  ========== app_nrf52_get_ain1 ==========================================================
 int16_t app_nrf52_get_ain1()
 {
-    int16_t percent = 0;
-    int8_t ret = 0;
-    int32_t voltage = 0;        // variable to store converted ADC value
+    int16_t percent;
 
     // read sample from the ADC
-    ret = adc_read(adc_channel.dev, &sequence1);
+    int8_t ret = adc_read(adc_channel.dev, &sequence1);
     if (ret < 0 ) {        
 	    printk("raw adc values is not up to date. error: %d\n", ret);
 	    return 0;
@@ -102,7 +100,7 @@ int16_t app_nrf52_get_ain1()
 //    printk("raw adc value: %d\n", buf1);
 
     // convert ADC reading to voltage
-    voltage = (buffer * ADC_REFERENCE_VOLTAGE) / ADC_RESOLUTION;
+    int32_t voltage = (buffer * ADC_REFERENCE_VOLTAGE) / ADC_RESOLUTION;
 //    printk("convert voltage: %d mV\n", voltage);
 
     // ensure voltage is within range
