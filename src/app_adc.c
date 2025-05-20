@@ -101,12 +101,12 @@ int16_t app_nrf52_get_ain1()
 
     // convert ADC reading to voltage
     int32_t voltage = (buffer * ADC_REFERENCE_VOLTAGE) / ADC_RESOLUTION;
-//    printk("convert voltage: %d mV\n", voltage);
+    printk("convert voltage: %d mV\n", voltage);
 
     // ensure voltage is within range
     if (voltage > BATTERY_MAX_VOLTAGE) voltage = BATTERY_MAX_VOLTAGE;
     if (voltage < BATTERY_MIN_VOLTAGE) voltage = BATTERY_MIN_VOLTAGE + 1;
-//    printk("clamped voltage: %d mV\n", voltage);
+ //   printk("clamped voltage: %d mV\n", voltage);
 
     // non-linear scaling
     int32_t range = BATTERY_MAX_VOLTAGE - BATTERY_MIN_VOLTAGE;
@@ -115,7 +115,7 @@ int16_t app_nrf52_get_ain1()
     if (range > 0 && difference > 0) {
         // use power scaling: percentage = ((difference / range) ^ 1.5) * 100
         double normalized = (double)difference / range;  // normalize to range [0, 1]
-        double scaled = pow(normalized, 1.5);            // apply non-linear scaling
+        double scaled = pow(normalized, 1.2);            // apply non-linear scaling
         percent = (int16_t)(scaled * 100);               // convert to percentage
     } else {
         printk("error: invalid range or difference.\n");
@@ -139,7 +139,8 @@ static void adc_thread(void *arg1, void *arg2, void *arg3) {
             k_mutex_unlock(&buffer_lock);
             k_sem_give(&data_ready_sem);
         }
-        k_sleep(K_MSEC(5)); // adjust for sampling rate - Fs=200Hz
+        //k_sleep(K_MSEC(5)); // adjust for sampling rate - Fs=200Hz
+        k_sleep(K_MSEC(1000));
     }
 }
 

@@ -14,14 +14,15 @@
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/adc.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stddef.h>
 
 //  ========== defines =====================================================================
 #define ADC_REFERENCE_VOLTAGE       3300    // 3.3V reference voltage of the board
 #define ADC_RESOLUTION              4096    // 12-bit resolution
-#define ADC_BUFFER_SIZE             256
-#define BATTERY_MAX_VOLTAGE         4200
-#define BATTERY_MIN_VOLTAGE         2900
+#define ADC_BUFFER_SIZE             1024    
+#define BATTERY_MAX_VOLTAGE         2980
+#define BATTERY_MIN_VOLTAGE         2270
 
 //  ========== globals =====================================================================
 extern struct k_sem data_ready_sem;

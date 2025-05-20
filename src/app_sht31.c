@@ -16,7 +16,7 @@ int16_t app_sht31_get_temp(const struct device *dev)
     int8_t ret = 0;
 
     // get sensor device
-	dev = DEVICE_DT_GET_ONE(sensirion_sht3xd);
+//	dev = DEVICE_DT_GET_ONE(sensirion_sht3xd);
 
     // fetch the latest sample from the sensor
 	ret = sensor_sample_fetch(dev);
@@ -47,7 +47,6 @@ int16_t app_sht31_get_hum(const struct device *dev)
     struct sensor_value val;
     int32_t hum = 0;
     int8_t ret = 0;
-
 
     // get sensor device
 	dev = DEVICE_DT_GET_ONE(sensirion_sht3xd);

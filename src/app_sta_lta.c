@@ -10,9 +10,9 @@
 #include "app_lorawan.h"
 
 //  ========== defines =====================================================================
-#define STA_WINDOW_SIZE 20
-#define LTA_WINDOW_SIZE 100
-#define THRESHOLD       3.0
+#define STA_WINDOW_SIZE     255
+#define LTA_WINDOW_SIZE     1023
+#define THRESHOLD           1.0 //3.0
 
 //  ========== globals =====================================================================
 // define a thread stack with a size of 1024 bytes for the STA/LTA thread.
@@ -52,22 +52,41 @@ static void sta_lta_thread(void *arg1, void *arg2, void *arg3) {
         // wait for a semaphore indicating that new ADC data is available
         k_sem_take(&data_ready_sem, K_FOREVER);
 
+        printk("sta/lta: get adc buffer\n");
+
         // retrieve the most recent data for the STA and LTA buffers
         adc_get_buffer(sta_buffer, STA_WINDOW_SIZE, -STA_WINDOW_SIZE);
         adc_get_buffer(lta_buffer, LTA_WINDOW_SIZE, -LTA_WINDOW_SIZE);
+
+        printk("sta/lta: calculate ratio\n");
 
         // calculate the STA and LTA values
         float sta = calculate_sta(sta_buffer, STA_WINDOW_SIZE);
         float lta = calculate_lta(lta_buffer, LTA_WINDOW_SIZE);
 
+        // validate values before calculating ratio
+        // check if LTA is zero
+        if (lta == 0) {
+            printk("Error: LTA is zero. Buffer might not be initialized properly.\n");
+            // debug the buffer
+            for (size_t i = 0; i < LTA_WINDOW_SIZE; i++) {
+                printk("lta_buffer[%zu] = %d\n", i, lta_buffer[i]);
+            }
+            return 0;
+        }
+
+        float ratio = sta/lta;
+        printk("STA: %.2f, LTA: %.2f, ratio STA/LTA: %.2f\n", sta, lta, ratio);
+
         // check if the STA/LTA ratio exceeds the defined threshold
-        if (sta / lta > THRESHOLD) {
+        if (ratio > THRESHOLD) {
             // log the event and trigger a LoRaWAN transmission
-            printk("event detected: STA/LTA = %.2f", sta / lta);
+            //printk("event detected: STA/LTA = %.2f", ratio);
             lorawan_trigger_transmission();
         }
     }
 }
+
 //  ========== sta_lta_start ===============================================================
 // create and initialize the thread with the specified stack and priority
 void sta_lta_start(void) {

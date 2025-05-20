@@ -41,8 +41,7 @@ static void lorawan_thread(void *arg1, void *arg2, void *arg3) {
         k_thread_suspend(k_current_get());
 
         // acquire ADC data into the buffer
-        adc_get_buffer((uint16_t *)data, ADC_BUFFER_SIZE, 0);
-
+        adc_get_buffer((uint16_t *)&data[4], ADC_BUFFER_SIZE, 0);
 
         // transmit the data over LoRaWAN
         lorawan_send(LORAWAN_PORT, data, sizeof(data), LORAWAN_MSG_UNCONFIRMED);

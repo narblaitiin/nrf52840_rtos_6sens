@@ -81,6 +81,6 @@ const struct device *app_rtc_init(void)
         return NULL;
     }
 
-    printk("RTC device \"%s\" initialized successfully", rtc_dev->name);
+    printk("RTC device \"%s\" initialized successfully\n", rtc_dev->name);
     return rtc_dev;
 }

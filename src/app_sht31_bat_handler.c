@@ -13,7 +13,7 @@ int8_t app_sht31_bat_handler()
     int8_t ret;
     int16_t raw_payload[RAW_PAYLOAD];
     uint8_t byte_payload[BYTE_PAYLOAD];
-    const struct device *dev;
+    char test_payload[] = {'h', 'e', 'l', 'l', 'o', 'w', 'o', 'r', 'l', 'd'};
 
     // config of LEDs
     static const struct gpio_dt_spec led_tx = GPIO_DT_SPEC_GET(LED_TX, gpios);
@@ -26,14 +26,15 @@ int8_t app_sht31_bat_handler()
 	gpio_pin_set_dt(&led_rx, 0);
 
     // get sensor device
-	dev = DEVICE_DT_GET_ONE(sensirion_sht3xd);
+	const struct device *dev = DEVICE_DT_GET_ONE(sensirion_sht3xd);
+
     raw_payload[0] = app_nrf52_get_ain1();
     printk("battery level (int16): %d\n", raw_payload[0]);
 
     raw_payload[1] = app_sht31_get_temp(dev);
     printk("sht31 temperature (int16): %d\n", raw_payload[1]);
 
-    k_msleep(2000);		// small delay  between reading
+//    k_msleep(2000);		// small delay  between reading
     raw_payload[2] = app_sht31_get_hum(dev);
     printk("sht31 humidity (int16): %d\n", raw_payload[2]);
 
@@ -50,6 +51,8 @@ int8_t app_sht31_bat_handler()
     gpio_pin_toggle_dt(&led_rx);
 
 	ret = lorawan_send(LORAWAN_PORT, byte_payload, sizeof(byte_payload), LORAWAN_MSG_UNCONFIRMED);
+
+//    ret = lorawan_send(LORAWAN_PORT, test_payload, sizeof(test_payload), LORAWAN_MSG_UNCONFIRMED);
 
     if (ret == -EAGAIN) {
         printk("lorawan_send failed: %d. continuing...\n", ret);
