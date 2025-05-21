@@ -23,6 +23,7 @@
 #define ADC_BUFFER_SIZE             1024    
 #define BATTERY_MAX_VOLTAGE         2980
 #define BATTERY_MIN_VOLTAGE         2270
+#define DEFAULT_SAMPLING_RATE_MS    2000
 
 //  ========== globals =====================================================================
 extern struct k_sem data_ready_sem;

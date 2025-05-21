@@ -13,7 +13,6 @@ int8_t app_sht31_bat_handler()
     int8_t ret;
     int16_t raw_payload[RAW_PAYLOAD];
     uint8_t byte_payload[BYTE_PAYLOAD];
-    char test_payload[] = {'h', 'e', 'l', 'l', 'o', 'w', 'o', 'r', 'l', 'd'};
 
     // config of LEDs
     static const struct gpio_dt_spec led_tx = GPIO_DT_SPEC_GET(LED_TX, gpios);
@@ -25,21 +24,30 @@ int8_t app_sht31_bat_handler()
 	gpio_pin_set_dt(&led_tx, 0);
 	gpio_pin_set_dt(&led_rx, 0);
 
+    // set 0 to timestamp byte value
+    for (int i = 0; i < 2; i++) {
+        raw_payload[i] = 0;
+    }
+
     // get sensor device
 	const struct device *dev = DEVICE_DT_GET_ONE(sensirion_sht3xd);
 
-    raw_payload[0] = app_nrf52_get_ain1();
+    raw_payload[2] = app_nrf52_get_ain1();
     printk("battery level (int16): %d\n", raw_payload[0]);
 
-    raw_payload[1] = app_sht31_get_temp(dev);
+    raw_payload[3] = app_sht31_get_temp(dev);
     printk("sht31 temperature (int16): %d\n", raw_payload[1]);
 
-//    k_msleep(2000);		// small delay  between reading
-    raw_payload[2] = app_sht31_get_hum(dev);
+    k_msleep(2000);		// small delay  between reading
+
+    raw_payload[4] = app_sht31_get_hum(dev);
     printk("sht31 humidity (int16): %d\n", raw_payload[2]);
 
+    // no velocity
+    raw_payload[5] = 0;
+
     // convert int16_t payload to byte array with big-endian representation
-    for (int j = 0; j < 3; j++) {
+    for (int j = 0; j < 7; j++) {
         byte_payload[j * 2] = (raw_payload[j] >> 8) & 0xFF; // high byte
         byte_payload[j * 2 + 1] = raw_payload[j] & 0xFF;    // low byte
     }
@@ -50,9 +58,7 @@ int8_t app_sht31_bat_handler()
 	gpio_pin_toggle_dt(&led_tx);
     gpio_pin_toggle_dt(&led_rx);
 
-	ret = lorawan_send(LORAWAN_PORT, byte_payload, sizeof(byte_payload), LORAWAN_MSG_UNCONFIRMED);
-
-//    ret = lorawan_send(LORAWAN_PORT, test_payload, sizeof(test_payload), LORAWAN_MSG_UNCONFIRMED);
+//	ret = lorawan_send(LORAWAN_PORT, byte_payload, sizeof(byte_payload), LORAWAN_MSG_UNCONFIRMED);
 
     if (ret == -EAGAIN) {
         printk("lorawan_send failed: %d. continuing...\n", ret);

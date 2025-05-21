@@ -13,6 +13,7 @@
 #include <zephyr/device.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/i2c.h>
+#include <zephyr/drivers/rtc.h>
 #include <zephyr/drivers/counter.h>
 #include <time.h>
  

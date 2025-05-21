@@ -37,7 +37,7 @@ int8_t app_rtc_set_time(const struct device *i2c_dev, const struct tm *date_time
     }
 
     printk("RTC time set successfully\n");
-    return 0;
+    return 1;
 }
 
 //  ========== app_rtc_get_time ============================================================
@@ -46,7 +46,7 @@ int32_t app_rtc_get_time(const struct device *i2c_dev, struct tm *date_time)
     uint8_t rtc_data[7];
     int ret = i2c_burst_read(i2c_dev, DS3231_I2C_ADDR, 0x00, rtc_data, sizeof(rtc_data));
     if (ret < 0) {
-        printk("failed to read RTC registers. error: %d", ret);
+        printk("failed to read RTC registers. error: %d\n", ret);
         return ret;
     }
 

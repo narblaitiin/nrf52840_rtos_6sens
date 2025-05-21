@@ -10,8 +10,10 @@
 #include "app_sht31_bat_handler.h"
 #include "app_adc.h"
 #include "app_eeprom.h"
+#include "app_rtc.h"
+#include <stdbool.h>
 
-#define STACK_SIZE 4096
+#define STACK_SIZE 2048
 #define PRIORITY   2
 
 //  ========== globals =====================================================================
@@ -36,33 +38,22 @@ static void lorwan_datarate_changed(enum lorawan_datarate dr)
 
 // semaphore for signaling the LoRaWAN send thread
 struct k_sem lorawan_sem;
-
-// timer callback
-void thb_timer_callback(struct k_timer *timer)
-{
-	printk("timer callback triggered\n");
-	k_sem_give(&lorawan_sem);
-	printk("semaphore signal given\n");
-}
-
-// define the timer
-K_TIMER_DEFINE(thb_timer, thb_timer_callback, NULL);
+bool lorawan_thread_running = true;
 
 void lorawan_thread_func(void)
 {
 	printk("LoRaWAN thread started\n");
-	while (1) {
+	while (lorawan_thread_running) {
         printk("thread waiting for semaphore...\n");
-		int ret = k_sem_take(&lorawan_sem, K_SECONDS(20));
+		int ret = k_sem_take(&lorawan_sem, K_SECONDS(30));
         if (ret == 0) {
             printk("semaphore acquired in thread\n");
+			(void)app_sht31_bat_handler();
         } else {
             printk("k_sem_take timeout occurred\n");
         }
-		(void)app_sht31_bat_handler();
     }
 }
-
 K_THREAD_DEFINE(lorawan_thread_id, STACK_SIZE, lorawan_thread_func, NULL, NULL, NULL, PRIORITY, 0, 0);
 
 //  ========== main ========================================================================
@@ -102,6 +93,21 @@ int8_t main(void)
         return 0;
     }
 
+	const struct tm date_time = {
+    	.tm_year = 2025 - 1900, // years since 1900
+        .tm_mon = 5 - 1,        // months since January (0-11)
+        .tm_mday = 16,          // day of the month
+        .tm_hour = 12,
+        .tm_min = 0,
+        .tm_sec = 0,
+	};
+
+	ret = app_rtc_set_time(rtc_dev, &date_time);
+	if (ret !=1) {
+		printk("failed to initialize RTC device\n");
+		return 0;
+	}
+
 	// initialize LoRaWAN protocol and register the device
 	// ret = app_lorawan_init();
 	// if (ret != 1) {
@@ -109,56 +115,59 @@ int8_t main(void)
 	// 	return 0;
 	// }
 
-    const struct device *lora_dev;
-	struct lorawan_join_config join_cfg;
-	uint8_t dev_eui[] = LORAWAN_DEV_EUI;
-	uint8_t join_eui[] = LORAWAN_JOIN_EUI;
-	uint8_t app_key[] = LORAWAN_APP_KEY;
+    // const struct device *lora_dev;
+	// struct lorawan_join_config join_cfg;
+	// uint8_t dev_eui[] = LORAWAN_DEV_EUI;
+	// uint8_t join_eui[] = LORAWAN_JOIN_EUI;
+	// uint8_t app_key[] = LORAWAN_APP_KEY;
 
-	struct lorawan_downlink_cb downlink_cb = {
-		.port = LW_RECV_PORT_ANY,
-		.cb = dl_callback
-	};
+	// struct lorawan_downlink_cb downlink_cb = {
+	// 	.port = LW_RECV_PORT_ANY,
+	// 	.cb = dl_callback
+	// };
 
-	lora_dev = DEVICE_DT_GET(DT_ALIAS(lora0));
-	if (!device_is_ready(lora_dev)) {
-		printk("%s: device not ready\n", lora_dev->name);
-		return 0;
-	}
+	// lora_dev = DEVICE_DT_GET(DT_ALIAS(lora0));
+	// if (!device_is_ready(lora_dev)) {
+	// 	printk("%s: device not ready\n", lora_dev->name);
+	// 	return 0;
+	// }
 
-	ret = lorawan_start();
-	if (ret < 0) {
-		printk("lorawan_start failed: %d", ret);
-		return 0;
-	}
+	// ret = lorawan_start();
+	// if (ret < 0) {
+	// 	printk("lorawan_start failed: %d", ret);
+	// 	return 0;
+	// }
 
-	lorawan_register_downlink_callback(&downlink_cb);
-	lorawan_register_dr_changed_callback(lorwan_datarate_changed);
+	// lorawan_register_downlink_callback(&downlink_cb);
+	// lorawan_register_dr_changed_callback(lorwan_datarate_changed);
 
-	join_cfg.mode = LORAWAN_ACT_OTAA;
-	join_cfg.dev_eui = dev_eui;
-	join_cfg.otaa.join_eui = join_eui;
-	join_cfg.otaa.app_key = app_key;
-	join_cfg.otaa.nwk_key = app_key;
-	join_cfg.otaa.dev_nonce = 0u;
+	// join_cfg.mode = LORAWAN_ACT_OTAA;
+	// join_cfg.dev_eui = dev_eui;
+	// join_cfg.otaa.join_eui = join_eui;
+	// join_cfg.otaa.app_key = app_key;
+	// join_cfg.otaa.nwk_key = app_key;
+	// join_cfg.otaa.dev_nonce = 0u;
 
 	printk("Joining network over OTAA\n");
-	ret = lorawan_join(&join_cfg);
-	if (ret < 0) {
-		printk("lorawan_join_network failed: %d\n", ret);
-		return 0;
-	}
+	// ret = lorawan_join(&join_cfg);
+	// if (ret < 0) {
+	// 	printk("lorawan_join_network failed: %d\n", ret);
+	// 	return 0;
+	// }
 
 	printk("Geophone Measurement and Process Information\n");
+
 	// start ADC sampling and STA/LTA threads
 	adc_sampling_start();
     sta_lta_start();
 
 	printk("initializing semaphore...\n");
-//	k_sem_init(&lorawan_sem, 0, 1);
+	k_sem_init(&lorawan_sem, 0, 1);
 
-	printk("starting timer...\n");
-//	k_timer_start(&thb_timer, K_SECONDS(300), K_SECONDS(300));
+	// start the thread explicitly
+    printk("starting LoRaWAN thread...\n");
+    lorawan_thread_running = false;
+    k_sem_give(&lorawan_sem);
 
 	return 0;
 }

@@ -5,7 +5,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
- //  ========== includes ====================================================================
+//  ========== includes ====================================================================
 #include "app_adc.h"
 #include "app_lorawan.h"
 
@@ -81,7 +81,7 @@ static void sta_lta_thread(void *arg1, void *arg2, void *arg3) {
         // check if the STA/LTA ratio exceeds the defined threshold
         if (ratio > THRESHOLD) {
             // log the event and trigger a LoRaWAN transmission
-            //printk("event detected: STA/LTA = %.2f", ratio);
+            printk("event detected: STA/LTA = %.2f", ratio);
             lorawan_trigger_transmission();
         }
     }
