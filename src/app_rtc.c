@@ -67,7 +67,8 @@ int32_t app_rtc_get_time(const struct device *i2c_dev, struct tm *date_time)
     return timestamp;
 }
 
-uint64_t get_high_res_timestamp(uint64_t *timestamp_ms) {
+uint64_t get_high_res_timestamp() {
+    uint64_t timestamp_ms = 0;
     const struct device *rtc_dev = DEVICE_DT_GET_ONE(maxim_ds3231);
     if (!rtc_dev) {
         printk("RTC device not found\n");
@@ -79,13 +80,13 @@ uint64_t get_high_res_timestamp(uint64_t *timestamp_ms) {
         // RTC provides time in seconds
         uint64_t rtc_seconds = rtc_time.tm_sec + rtc_time.tm_min * 60 + rtc_time.tm_hour * 3600;
         
-        // System uptime in milliseconds
+        // system uptime in milliseconds
         uint64_t uptime_ms = k_uptime_get();
 
-        // Combine RTC and system time for a high-resolution timestamp
-        *timestamp_ms = rtc_seconds * 1000 + (uptime_ms % 1000);
+        // combine RTC and system time for a high-resolution timestamp
+        timestamp_ms = rtc_seconds * 1000 + (uptime_ms % 1000);
     } else {
-        printk("Failed to get time from RTC\n");
+        printk("failed to get time from RTC\n");
     }
     return timestamp_ms;
 }
