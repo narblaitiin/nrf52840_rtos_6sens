@@ -20,19 +20,21 @@
 //  ========== defines =====================================================================
 #define ADC_REFERENCE_VOLTAGE       3300    // 3.3V reference voltage of the board
 #define ADC_RESOLUTION              4096    // 12-bit resolution
-#define ADC_BUFFER_SIZE             1024    
+#define ADC_BUFFER_SIZE             1024 
+#define SAMPLING_RATE_MS            10
 #define BATTERY_MAX_VOLTAGE         2980
 #define BATTERY_MIN_VOLTAGE         2270
-#define DEFAULT_SAMPLING_RATE_MS    2000
 
 //  ========== globals =====================================================================
 extern struct k_sem data_ready_sem;
+extern int ring_head;
 
 //  ========== prototypes ==================================================================
 int8_t app_nrf52_adc_init();
 int16_t app_nrf52_get_ain1();
 void adc_sampling_start(void);
+void adc_sampling_stop(void);
 void adc_get_buffer(uint16_t *dest, size_t size, int offset);
-void sta_lta_start(void);
+void set_sampling_rate(uint32_t rate_ms);
 
 #endif /* APP_ADC_H */

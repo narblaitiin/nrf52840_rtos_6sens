@@ -13,6 +13,7 @@
 #include "app_flash.h"
 #include "app_lorawan.h"
 #include "app_sht31.h"
+#include "app_rtc.h"
 
 //  ========== defines =====================================================================
 /* led control */

@@ -24,24 +24,28 @@ int8_t app_sht31_bat_handler()
 	gpio_pin_set_dt(&led_tx, 0);
 	gpio_pin_set_dt(&led_rx, 0);
 
-    // set 0 to timestamp byte value
-    for (int i = 0; i < 2; i++) {
-        raw_payload[i] = 0;
-    }
+    // initialize DS3231 RTC device via I2C (Pins: SDA -> P0.09, SCL -> P0.0)
+    const struct device *rtc = DEVICE_DT_GET_ONE(maxim_ds3231);
 
+    // retrieve the current timestamp from the RTC device 
+    struct tm current_time;  
+    int32_t timestamp = app_rtc_get_time(rtc, &current_time);
+
+    // add the timestamp to the start of the data buffer
+    raw_payload[0] = (timestamp >> 16) & 0xFF;      // most significant byte
+    raw_payload[1] = timestamp & 0xFF;              // least significant byte
+       
     // get sensor device
 	const struct device *dev = DEVICE_DT_GET_ONE(sensirion_sht3xd);
+    if (!device_is_ready(dev)) {
+        printk("%s: sensor device not ready\n", dev->name);
+        return -ENODEV;
+    }
 
     raw_payload[2] = app_nrf52_get_ain1();
-    printk("battery level (int16): %d\n", raw_payload[0]);
-
     raw_payload[3] = app_sht31_get_temp(dev);
-    printk("sht31 temperature (int16): %d\n", raw_payload[1]);
-
     k_msleep(2000);		// small delay  between reading
-
     raw_payload[4] = app_sht31_get_hum(dev);
-    printk("sht31 humidity (int16): %d\n", raw_payload[2]);
 
     // no velocity
     raw_payload[5] = 0;
@@ -52,13 +56,13 @@ int8_t app_sht31_bat_handler()
         byte_payload[j * 2 + 1] = raw_payload[j] & 0xFF;    // low byte
     }
 
-    printk("sending converted data...\n");
+    printk("sending battery level, temparature, humdity...\n");
 
     // blink LEDs when lorawan is activated
 	gpio_pin_toggle_dt(&led_tx);
     gpio_pin_toggle_dt(&led_rx);
 
-//	ret = lorawan_send(LORAWAN_PORT, byte_payload, sizeof(byte_payload), LORAWAN_MSG_UNCONFIRMED);
+	ret = lorawan_send(LORAWAN_PORT, byte_payload, sizeof(byte_payload), LORAWAN_MSG_UNCONFIRMED);
 
     if (ret == -EAGAIN) {
         printk("lorawan_send failed: %d. continuing...\n", ret);

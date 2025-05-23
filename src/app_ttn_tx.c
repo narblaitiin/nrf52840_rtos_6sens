@@ -39,13 +39,13 @@ static void lorawan_thread(void *arg1, void *arg2, void *arg3) {
     while (1) {
         // suspend the thread, effectively pausing it until explicitly resumed
         k_thread_suspend(k_current_get());
-
+        printk("sending timestamp and velocity...\n");
         // acquire ADC data into the buffer
         adc_get_buffer((uint16_t *)&data[4], ADC_BUFFER_SIZE, 0);
 
         // transmit the data over LoRaWAN
         lorawan_send(LORAWAN_PORT, data, sizeof(data), LORAWAN_MSG_UNCONFIRMED);
-        printk("data sent to LoRaWAN");
+        printk("data sent to LoRaWAN\n");
     }
 }
 

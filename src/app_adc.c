@@ -9,10 +9,10 @@
 
 //  ========== globals =====================================================================
 // ADC buffer to store raw ADC readings
-static int16_t buffer;
-static int16_t adc_buffer[ADC_BUFFER_SIZE];
+static int16_t buffer1;
+static int16_t buffer0;
 static uint16_t ring_buffer[ADC_BUFFER_SIZE];
-static uint32_t sampling_rate_ms = DEFAULT_SAMPLING_RATE_MS;
+static uint32_t sampling_rate_ms = SAMPLING_RATE_MS;
 static bool stop_sampling = false;
 static bool adc_initialized = false;
 
@@ -39,7 +39,7 @@ K_SEM_DEFINE(data_ready_sem, 0, 1);
 static uint16_t ring_buffer[ADC_BUFFER_SIZE];
 
 // index to track the head of the ring buffer
-static int ring_head = 0;
+int ring_head = 0;
 
 // configure ADC sequence
 static int8_t configure_adc_sequence(struct adc_sequence *sequence, uint8_t channel_bitmask, void *buffer, size_t buffer_size) {
@@ -68,9 +68,15 @@ int8_t app_nrf52_adc_init()
         return err;
     }
 
-    if (configure_adc_sequence(&sequence0, 0, adc_buffer, sizeof(adc_buffer)) < 0 ||
-        configure_adc_sequence(&sequence1, 1, &buffer, sizeof(buffer)) < 0) {
-        printk("Failed to configure ADC sequences\n");
+    // if (configure_adc_sequence(&sequence0, 0, adc_buffer, sizeof(adc_buffer)) < 0 ||
+    //     configure_adc_sequence(&sequence1, 1, &buffer, sizeof(buffer)) < 0) {
+    //     printk("Failed to configure ADC sequences\n");
+    //     return -1;
+    // }
+
+    if (configure_adc_sequence(&sequence0, 0, &buffer0, sizeof(buffer0)) < 0 ||
+        configure_adc_sequence(&sequence1, 1, &buffer1, sizeof(buffer1)) < 0) {
+        printk("failed to configure ADC sequences\n");
         return -1;
     }
 
@@ -92,7 +98,7 @@ int16_t app_nrf52_get_ain1()
     }
 
     // convert ADC reading to voltage
-    int32_t voltage = (adc_buffer[0] * ADC_REFERENCE_VOLTAGE) / ADC_RESOLUTION;
+    int32_t voltage = (buffer1 * ADC_REFERENCE_VOLTAGE) / ADC_RESOLUTION;
     printk("convert voltage: %d mV\n", voltage);
 
     // ensure voltage is within range
@@ -114,7 +120,7 @@ int16_t app_nrf52_get_ain1()
         percent = 0;
     }
 
-    printk("battery level (non-linear, int16): %d%%\n", percent);
+    printk("battery level (non-linear): %d%%\n", percent);
     return percent;
 }
 
@@ -124,10 +130,9 @@ static void adc_thread(void *arg1, void *arg2, void *arg3) {
         if (adc_read(adc_channel.dev, &sequence0) == 0) {
             k_mutex_lock(&buffer_lock, K_FOREVER);
             for (size_t i = 0; i < ADC_BUFFER_SIZE; i++) {
-                ring_buffer[(ring_head + i) % ADC_BUFFER_SIZE] = adc_buffer[i];
-                printk("ADC buffer values: %d\n", adc_buffer[i]);
+                ring_buffer[ring_head] = buffer0;
+                ring_head = (ring_head + 1) % ADC_BUFFER_SIZE;
             }
-            ring_head = (ring_head + ADC_BUFFER_SIZE) % ADC_BUFFER_SIZE;
             k_mutex_unlock(&buffer_lock);
             k_sem_give(&data_ready_sem);
         } else {
@@ -144,14 +149,14 @@ void adc_sampling_start(void) {
     stop_sampling = false;
     k_thread_create(&adc_thread_data, adc_stack, K_THREAD_STACK_SIZEOF(adc_stack),
                     adc_thread, NULL, NULL, NULL, 1, 0, K_NO_WAIT);
-    printk("ADC sampling thrad started\n");
+    //printk("ADC sampling thrad started\n");
 }
 
 // stop ADC sampling thread
 void adc_sampling_stop(void) {
     stop_sampling = true;
     k_thread_join(&adc_thread_data, K_FOREVER);
-    printk("ADC sampling thread stopped.\n");
+    //printk("ADC sampling thread stopped.\n");
 }
 
 //  ========== adc_get_buffer ==============================================================
@@ -159,13 +164,19 @@ void adc_sampling_stop(void) {
 // use a mutex to ensure thread-safe access.
 void adc_get_buffer(uint16_t *dest, size_t size, int offset) {
     if (!dest || size > ADC_BUFFER_SIZE || offset < 0 || offset >= ADC_BUFFER_SIZE) {
-        printk("Invalid parameters in adc_get_buffer.\n");
+        printk("invalid parameters in adc_get_buffer.\n");
         return;
     }
+
+    // handle negative offsets by wrapping them around the buffer
+    int start_index = (ring_head + offset + ADC_BUFFER_SIZE) % ADC_BUFFER_SIZE;
+
+    //printk("fetching ADC buffer: start_index=%d, size=%zu\n", start_index, size);
 
     k_mutex_lock(&buffer_lock, K_FOREVER);
     for (size_t i = 0; i < size; i++) {
         dest[i] = ring_buffer[(ring_head + offset + i) % ADC_BUFFER_SIZE];
+        //printk("dest[%zu] = ring_buffer[%d] = %d\n", i, (start_index + i) % ADC_BUFFER_SIZE, dest[i]);
     }
     k_mutex_unlock(&buffer_lock);
 }
@@ -173,5 +184,5 @@ void adc_get_buffer(uint16_t *dest, size_t size, int offset) {
 // set ADC sampling rate
 void set_sampling_rate(uint32_t rate_ms) {
     sampling_rate_ms = rate_ms;
-    printk("Sampling rate set to %d ms.\n", rate_ms);
+    //printk("sampling rate set to %d ms.\n", rate_ms);
 }

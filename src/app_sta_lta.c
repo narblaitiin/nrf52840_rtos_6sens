@@ -10,9 +10,17 @@
 #include "app_lorawan.h"
 
 //  ========== defines =====================================================================
-#define STA_WINDOW_SIZE     255
-#define LTA_WINDOW_SIZE     1023
-#define THRESHOLD           1.0 //3.0
+// STA and LTA window durations in milliseconds
+#define STA_WINDOW_DURATION_MS      10      // 100 ms
+#define LTA_WINDOW_DURATION_MS      1000    // 1 seconds
+
+// derived buffer sizes
+#define STA_WINDOW_SIZE (STA_WINDOW_DURATION_MS / SAMPLING_RATE_MS)
+#define LTA_WINDOW_SIZE (LTA_WINDOW_DURATION_MS / SAMPLING_RATE_MS)
+
+// trigger thresholds with hysteresis
+#define TRIGGER_THRESHOLD           3.0f    // STA/LTA ratio to trigger event
+#define RESET_THRESHOLD             1.5f    // STA/LTA ratio to reset trigger
 
 //  ========== globals =====================================================================
 // define a thread stack with a size of 1024 bytes for the STA/LTA thread.
@@ -28,9 +36,9 @@ static uint16_t lta_buffer[LTA_WINDOW_SIZE];
 //  ========== calculate_sta ===============================================================
 // function to calculate the Short-Term Average (STA) of a given buffer
 static float calculate_sta(const uint16_t *buffer, size_t size) {
-    float sum = 0.0;
+    float sum = 0;
     for (size_t i = 0; i < size; i++) {
-        sum += buffer[i];
+        sum += (float)buffer[i];
     }
     return sum / size;
 }
@@ -38,9 +46,9 @@ static float calculate_sta(const uint16_t *buffer, size_t size) {
 //  ========== calculate ===================================================================
 // function to calculate the Long-Term Average (LTA) of a given buffer
 static float calculate_lta(const uint16_t *buffer, size_t size) {
-    float sum = 0.0;
+    float sum = 0;
     for (size_t i = 0; i < size; i++) {
-        sum += buffer[i];
+        sum += (float)buffer[i];
     }
     return sum / size;
 }
@@ -48,17 +56,22 @@ static float calculate_lta(const uint16_t *buffer, size_t size) {
 //  ========== sta_lta_thread ==============================================================
 // thread function to monitor and analyze data using the STA/LTA algorithm
 static void sta_lta_thread(void *arg1, void *arg2, void *arg3) {
+    static bool event_triggered = false;
     while (1) {
         // wait for a semaphore indicating that new ADC data is available
         k_sem_take(&data_ready_sem, K_FOREVER);
 
-        printk("sta/lta: get adc buffer\n");
+        // printk("sta/lta: get adc buffer\n");
+
+        int sta_offset = (ring_head - STA_WINDOW_SIZE + ADC_BUFFER_SIZE) % ADC_BUFFER_SIZE;
+        int lta_offset = (ring_head - LTA_WINDOW_SIZE + ADC_BUFFER_SIZE) % ADC_BUFFER_SIZE;
 
         // retrieve the most recent data for the STA and LTA buffers
-        adc_get_buffer(sta_buffer, STA_WINDOW_SIZE, -STA_WINDOW_SIZE);
-        adc_get_buffer(lta_buffer, LTA_WINDOW_SIZE, -LTA_WINDOW_SIZE);
+        adc_get_buffer(sta_buffer, STA_WINDOW_SIZE, sta_offset);
+        adc_get_buffer(lta_buffer, LTA_WINDOW_SIZE, lta_offset);
 
-        printk("sta/lta: calculate ratio\n");
+        // adc_get_buffer(sta_buffer, STA_WINDOW_SIZE, -STA_WINDOW_SIZE);
+        // adc_get_buffer(lta_buffer, LTA_WINDOW_SIZE, -LTA_WINDOW_SIZE);
 
         // calculate the STA and LTA values
         float sta = calculate_sta(sta_buffer, STA_WINDOW_SIZE);
@@ -74,15 +87,20 @@ static void sta_lta_thread(void *arg1, void *arg2, void *arg3) {
             }
             return 0;
         }
-
-        float ratio = sta/lta;
-        printk("STA: %.2f, LTA: %.2f, ratio STA/LTA: %.2f\n", sta, lta, ratio);
+        
+        float ratio = sta/lta;;
+        printk("[time %lu ms] STA: %.2f, LTA: %.2f, ratio: %.2f\n",
+               k_uptime_get(), sta, lta, ratio);
 
         // check if the STA/LTA ratio exceeds the defined threshold
-        if (ratio > THRESHOLD) {
-            // log the event and trigger a LoRaWAN transmission
-            printk("event detected: STA/LTA = %.2f", ratio);
+        // Trigger event with hysteresis
+        if (!event_triggered && ratio > TRIGGER_THRESHOLD) {
+            event_triggered = true;
+            printk(">>> EVENT START (ratio = %.2f)\n", ratio);
             lorawan_trigger_transmission();
+        } else if (event_triggered && ratio < RESET_THRESHOLD) {
+            event_triggered = false;
+            printk("<<< EVENT END (ratio = %.2f)\n", ratio);
         }
     }
 }
