@@ -30,11 +30,15 @@ int8_t app_sht31_bat_handler()
     // retrieve the current timestamp from the RTC device 
     struct tm current_time;  
     int32_t timestamp = app_rtc_get_time(rtc, &current_time);
+    // uint64 timestamp = get_high_res_timestamp();
 
     // add the timestamp to the start of the data buffer
-    raw_payload[0] = (timestamp >> 16) & 0xFF;      // most significant byte
-    raw_payload[1] = timestamp & 0xFF;              // least significant byte
-       
+    raw_payload[0] = (timestamp >> 16) & 0xFF;      
+    raw_payload[1] = timestamp & 0xFF;
+
+    // raw_payload[0] = (timestamp >> 16) & 0xFF; 
+    // raw_payload[0] = (timestamp >> 16) & 0xFF;      
+
     // get sensor device
 	const struct device *dev = DEVICE_DT_GET_ONE(sensirion_sht3xd);
     if (!device_is_ready(dev)) {
@@ -75,6 +79,5 @@ int8_t app_sht31_bat_handler()
     } else {
         printk("data sent!\n");
     }
-
     return 0;
 }

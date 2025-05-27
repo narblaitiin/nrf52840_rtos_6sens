@@ -11,16 +11,16 @@
 
 //  ========== defines =====================================================================
 // STA and LTA window durations in milliseconds
-#define STA_WINDOW_DURATION_MS      10      // 100 ms
-#define LTA_WINDOW_DURATION_MS      1000    // 1 seconds
+#define STA_WINDOW_DURATION_MS      1000     // 1 seconds
+#define LTA_WINDOW_DURATION_MS      10000    // 10 seconds
 
 // derived buffer sizes
 #define STA_WINDOW_SIZE (STA_WINDOW_DURATION_MS / SAMPLING_RATE_MS)
 #define LTA_WINDOW_SIZE (LTA_WINDOW_DURATION_MS / SAMPLING_RATE_MS)
 
 // trigger thresholds with hysteresis
-#define TRIGGER_THRESHOLD           3.0f    // STA/LTA ratio to trigger event
-#define RESET_THRESHOLD             1.5f    // STA/LTA ratio to reset trigger
+#define TRIGGER_THRESHOLD           0.8f    // 5.0f // STA/LTA ratio to trigger event
+#define RESET_THRESHOLD             0.6f    // 2.5f // STA/LTA ratio to reset trigger
 
 //  ========== globals =====================================================================
 // define a thread stack with a size of 1024 bytes for the STA/LTA thread.
@@ -36,20 +36,22 @@ static uint16_t lta_buffer[LTA_WINDOW_SIZE];
 //  ========== calculate_sta ===============================================================
 // function to calculate the Short-Term Average (STA) of a given buffer
 static float calculate_sta(const uint16_t *buffer, size_t size) {
-    float sum = 0;
+    float sum = 0.0;
     for (size_t i = 0; i < size; i++) {
         sum += (float)buffer[i];
     }
+    //printk("STA sum: %.2f\n", sum/size);
     return sum / size;
 }
 
 //  ========== calculate ===================================================================
 // function to calculate the Long-Term Average (LTA) of a given buffer
 static float calculate_lta(const uint16_t *buffer, size_t size) {
-    float sum = 0;
+    float sum = 0.0;
     for (size_t i = 0; i < size; i++) {
         sum += (float)buffer[i];
     }
+    //printk("LTA sum: %.2f\n", sum/size);
     return sum / size;
 }
 
@@ -65,7 +67,7 @@ static void sta_lta_thread(void *arg1, void *arg2, void *arg3) {
 
         int sta_offset = (ring_head - STA_WINDOW_SIZE + ADC_BUFFER_SIZE) % ADC_BUFFER_SIZE;
         int lta_offset = (ring_head - LTA_WINDOW_SIZE + ADC_BUFFER_SIZE) % ADC_BUFFER_SIZE;
-
+        
         // retrieve the most recent data for the STA and LTA buffers
         adc_get_buffer(sta_buffer, STA_WINDOW_SIZE, sta_offset);
         adc_get_buffer(lta_buffer, LTA_WINDOW_SIZE, lta_offset);
@@ -88,20 +90,26 @@ static void sta_lta_thread(void *arg1, void *arg2, void *arg3) {
             return 0;
         }
         
-        float ratio = sta/lta;;
-        printk("[time %lu ms] STA: %.2f, LTA: %.2f, ratio: %.2f\n",
-               k_uptime_get(), sta, lta, ratio);
+        float ratio = sta/lta;
+        printk("STA: %.2f, LTA: %.2f, ratio: %.2f\n", sta, lta, ratio);
+
+        // check if the STA/LTA ratio exceeds the defined threshold
+        if (ratio > TRIGGER_THRESHOLD) {
+            printk(">>> EVENT START (ratio = %.2f)\n", ratio);
+            lorawan_trigger_transmission();
+        }
 
         // check if the STA/LTA ratio exceeds the defined threshold
         // Trigger event with hysteresis
-        if (!event_triggered && ratio > TRIGGER_THRESHOLD) {
-            event_triggered = true;
-            printk(">>> EVENT START (ratio = %.2f)\n", ratio);
-            lorawan_trigger_transmission();
-        } else if (event_triggered && ratio < RESET_THRESHOLD) {
-            event_triggered = false;
-            printk("<<< EVENT END (ratio = %.2f)\n", ratio);
-        }
+        // if (!event_triggered && ratio > TRIGGER_THRESHOLD) {
+        //     event_triggered = true;
+        //     printk(">>> EVENT START (ratio = %.2f)\n", ratio);
+        //     lorawan_trigger_transmission();
+        // }
+        // else if (event_triggered && ratio < RESET_THRESHOLD) {
+        //     event_triggered = false;
+        //     printk("<<< EVENT END (ratio = %.2f)\n", ratio);
+        // }
     }
 }
 

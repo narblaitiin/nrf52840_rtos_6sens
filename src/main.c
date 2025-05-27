@@ -12,6 +12,7 @@
 #include "app_eeprom.h"
 #include "app_rtc.h"
 #include <stdbool.h>
+#include <stdio.h>
 
 #define STACK_SIZE 2048
 #define PRIORITY   2
@@ -43,8 +44,8 @@ void lorawan_thread_func(void)
 	printk("LoRaWAN thread started\n");
     while (lorawan_thread_running) {
         printk("performing periodic action\n");
-        (void)app_sht31_bat_handler();	// Perform your task
-        k_sleep(K_SECONDS(60)); 		// sleep for 5 minutes -> test
+        (void)app_sht31_bat_handler();	// perform your task
+        k_sleep(K_SECONDS(60)); 		// sleep for 1 minutes -> test
     }
 }
 K_THREAD_DEFINE(lorawan_thread_id, STACK_SIZE, lorawan_thread_func, NULL, NULL, NULL, PRIORITY, 0, 0);
@@ -102,11 +103,11 @@ int8_t main(void)
 	}
 
 	// initialize LoRaWAN protocol and register the device
-	// ret = app_lorawan_init();
-	// if (ret != 1) {
-	// 	printk("failed to initialze LoRaWAN protocol\n");
-	// 	return 0;
-	// }
+	ret = app_lorawan_init();
+	if (ret != 1) {
+		printk("failed to initialze LoRaWAN protocol\n");
+		return 0;
+	}
 
     const struct device *lora_dev;
 	struct lorawan_join_config join_cfg;

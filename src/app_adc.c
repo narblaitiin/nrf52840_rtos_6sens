@@ -35,6 +35,9 @@ K_MUTEX_DEFINE(get_buffer_lock);
 // semaphore to signal when new ADC data is available
 K_SEM_DEFINE(data_ready_sem, 0, 1);
 
+// semaphore to signal sampling rate change
+K_SEM_DEFINE(rate_change_sem, 0, 1);
+
 // define a ring buffer to store ADC samples
 static uint16_t ring_buffer[ADC_BUFFER_SIZE];
 
@@ -67,12 +70,6 @@ int8_t app_nrf52_adc_init()
         printk("failed to setup ADC channel. Error: %d\n", err);
         return err;
     }
-
-    // if (configure_adc_sequence(&sequence0, 0, adc_buffer, sizeof(adc_buffer)) < 0 ||
-    //     configure_adc_sequence(&sequence1, 1, &buffer, sizeof(buffer)) < 0) {
-    //     printk("Failed to configure ADC sequences\n");
-    //     return -1;
-    // }
 
     if (configure_adc_sequence(&sequence0, 0, &buffer0, sizeof(buffer0)) < 0 ||
         configure_adc_sequence(&sequence1, 1, &buffer1, sizeof(buffer1)) < 0) {
@@ -129,14 +126,18 @@ static void adc_thread(void *arg1, void *arg2, void *arg3) {
     while (!stop_sampling) {
         if (adc_read(adc_channel.dev, &sequence0) == 0) {
             k_mutex_lock(&buffer_lock, K_FOREVER);
-            for (size_t i = 0; i < ADC_BUFFER_SIZE; i++) {
-                ring_buffer[ring_head] = buffer0;
-                ring_head = (ring_head + 1) % ADC_BUFFER_SIZE;
-            }
+            ring_buffer[ring_head] = buffer0;
+            ring_head = (ring_head + 1) % ADC_BUFFER_SIZE;
             k_mutex_unlock(&buffer_lock);
             k_sem_give(&data_ready_sem);
         } else {
             printk("failed to read ADC sequence 0\n");
+        }
+
+        // check for a rate change signal
+        if (k_sem_take(&rate_change_sem, K_NO_WAIT) == 0) {
+            printk("sampling rate updated to %d ms\n", sampling_rate_ms);
+            k_sem_reset(&rate_change_sem);  // reset semaphore count
         }
         k_sleep(K_MSEC(sampling_rate_ms));
     }
@@ -155,6 +156,7 @@ void adc_sampling_start(void) {
 // stop ADC sampling thread
 void adc_sampling_stop(void) {
     stop_sampling = true;
+    k_sem_give(&rate_change_sem); // interrupt sleep if needed
     k_thread_join(&adc_thread_data, K_FOREVER);
     //printk("ADC sampling thread stopped.\n");
 }
@@ -163,7 +165,7 @@ void adc_sampling_stop(void) {
 // copie a portion of the ADC ring buffer to a user-supplied buffer.
 // use a mutex to ensure thread-safe access.
 void adc_get_buffer(uint16_t *dest, size_t size, int offset) {
-    if (!dest || size > ADC_BUFFER_SIZE || offset < 0 || offset >= ADC_BUFFER_SIZE) {
+    if (!dest || size > ADC_BUFFER_SIZE) {
         printk("invalid parameters in adc_get_buffer.\n");
         return;
     }
@@ -174,8 +176,12 @@ void adc_get_buffer(uint16_t *dest, size_t size, int offset) {
     //printk("fetching ADC buffer: start_index=%d, size=%zu\n", start_index, size);
 
     k_mutex_lock(&buffer_lock, K_FOREVER);
+    // for (int i = 0; i < 10; i++) {  // Print first 10 entries
+    //     printk("ring_buffer[%d]: %d\n", i, ring_buffer[i]);
+    // }
+
     for (size_t i = 0; i < size; i++) {
-        dest[i] = ring_buffer[(ring_head + offset + i) % ADC_BUFFER_SIZE];
+        dest[i] = ring_buffer[(start_index + i) % ADC_BUFFER_SIZE];
         //printk("dest[%zu] = ring_buffer[%d] = %d\n", i, (start_index + i) % ADC_BUFFER_SIZE, dest[i]);
     }
     k_mutex_unlock(&buffer_lock);
@@ -184,5 +190,6 @@ void adc_get_buffer(uint16_t *dest, size_t size, int offset) {
 // set ADC sampling rate
 void set_sampling_rate(uint32_t rate_ms) {
     sampling_rate_ms = rate_ms;
+    k_sem_give(&rate_change_sem);  // signal the thread about the rate change
     //printk("sampling rate set to %d ms.\n", rate_ms);
 }
