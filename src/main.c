@@ -42,7 +42,7 @@ bool lorawan_thread_running = true;
 void lorawan_thread_func(void)
 {
 	printk("LoRaWAN thread started\n");
-    while (lorawan_thread_running) {
+    while (lorawan_thread_running == true) {
         printk("performing periodic action\n");
         (void)app_sht31_bat_handler();	// perform your task
         k_sleep(K_SECONDS(60)); 		// sleep for 1 minutes -> test
@@ -87,27 +87,14 @@ int8_t main(void)
         return 0;
     }
 
-	const struct tm date_time = {
-    	.tm_year = 2025 - 1900, // years since 1900
-        .tm_mon = 5 - 1,        // months since January (0-11)
-        .tm_mday = 16,          // day of the month
-        .tm_hour = 12,
-        .tm_min = 0,
-        .tm_sec = 0,
-	};
-
-	ret = app_rtc_set_time(rtc_dev, &date_time);
-	if (ret !=1) {
-		printk("failed to initialize RTC device\n");
-		return 0;
-	}
+	sync_uptime_with_rtc(rtc_dev);
 
 	// initialize LoRaWAN protocol and register the device
-	ret = app_lorawan_init();
-	if (ret != 1) {
-		printk("failed to initialze LoRaWAN protocol\n");
-		return 0;
-	}
+	// ret = app_lorawan_init();
+	// if (ret != 1) {
+	// 	printk("failed to initialze LoRaWAN protocol\n");
+	// 	return 0;
+	// }
 
     const struct device *lora_dev;
 	struct lorawan_join_config join_cfg;
@@ -155,8 +142,8 @@ int8_t main(void)
 	lorawan_thread_running = true;
 
 	// start ADC sampling and STA/LTA threads
-	adc_sampling_start();
-    sta_lta_start();
+//	adc_sampling_start();
+//    sta_lta_start();
 
 	return 0;
 }

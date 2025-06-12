@@ -29,7 +29,7 @@ static void lorawan_thread(void *arg1, void *arg2, void *arg3) {
     // retrieve the current timestamp from the RTC device 
     struct tm current_time;  
     //int32_t timestamp = app_rtc_get_time(rtc, &current_time);
-    uint64_t timestamp = get_high_res_timestamp();
+    uint64_t timestamp = app_rtc_get_time();
 
     // add the timestamp to the start of the data buffer
     data[0] = (timestamp >> 56) & 0xFF; // most significant byte

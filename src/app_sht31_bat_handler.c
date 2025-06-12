@@ -24,20 +24,14 @@ int8_t app_sht31_bat_handler()
 	gpio_pin_set_dt(&led_tx, 0);
 	gpio_pin_set_dt(&led_rx, 0);
 
-    // initialize DS3231 RTC device via I2C (Pins: SDA -> P0.09, SCL -> P0.0)
-    const struct device *rtc = DEVICE_DT_GET_ONE(maxim_ds3231);
-
     // retrieve the current timestamp from the RTC device 
-    struct tm current_time;  
-    int32_t timestamp = app_rtc_get_time(rtc, &current_time);
-    // uint64 timestamp = get_high_res_timestamp();
+    uint64_t timestamp =  app_rtc_get_time();
 
     // add the timestamp to the start of the data buffer
-    raw_payload[0] = (timestamp >> 16) & 0xFF;      
-    raw_payload[1] = timestamp & 0xFF;
-
-    // raw_payload[0] = (timestamp >> 16) & 0xFF; 
-    // raw_payload[0] = (timestamp >> 16) & 0xFF;      
+    raw_payload[0] = (timestamp >> 48) & 0xFF; 
+    raw_payload[1] = (timestamp >> 32) & 0xFF; 
+    raw_payload[2] = (timestamp >> 16) & 0xFF; 
+    raw_payload[3] = timestamp & 0xFF;    
 
     // get sensor device
 	const struct device *dev = DEVICE_DT_GET_ONE(sensirion_sht3xd);
