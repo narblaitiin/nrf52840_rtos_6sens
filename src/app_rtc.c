@@ -11,6 +11,7 @@
 //  ========== globals ====================================================================
 // global variable to track the offset between the system clock and RTC
 static int64_t system_rtc_offset_ms = 0;
+static struct k_mutex offset_mutex;
 
 //  ========== app_rtc_init ================================================================
 const struct device *app_rtc_init(void)
@@ -26,13 +27,16 @@ const struct device *app_rtc_init(void)
         return NULL;
     }
 
+    // initialize mute
+    k_mutex_init(&offset_mutex);
+
     printk("RTC device \"%s\" initialized successfully\n", rtc_dev->name);
     return rtc_dev;
 }
 
-//  ========== sync_uptime_with_rtc ================================================================
+//  ========== app_rtc_sync_uptime ========================================================
 // synchronize the system uptime with the DS3231 RTC.
-int8_t  sync_uptime_with_rtc(const struct device *i2c_dev)
+int8_t  app_rtc_sync_uptime(const struct device *i2c_dev)
 {
     struct tm rtc_time;
 
@@ -51,7 +55,7 @@ int8_t  sync_uptime_with_rtc(const struct device *i2c_dev)
     if (rtc_unix_seconds > 0) {
         printk("RTC time: %lld seconds\n", rtc_unix_seconds);
     } else {
-        printk("invalid RTC time\n");
+        printk("invalid RTC time conversion\n");
     }
 
     // calculate current system uptime in milliseconds
@@ -62,37 +66,55 @@ int8_t  sync_uptime_with_rtc(const struct device *i2c_dev)
     printk("system uptime (ms): %lld\n", current_uptime_ms);
 
     // calculate the offset between the RTC and the system clock
-    system_rtc_offset_ms = (rtc_unix_seconds * 1000LL) - current_uptime_ms;
+    int64_t new_offset_ms = (rtc_unix_seconds * 1000LL) - current_uptime_ms;
+
+    if (new_offset_ms< -31536000000LL || new_offset_ms > 31536000000LL) {
+        printk("offset out of range! calculation error\n");
+    }
+
+    // update global offset safely
+    k_mutex_lock(&offset_mutex, K_FOREVER);
+    system_rtc_offset_ms = new_offset_ms;
+    k_mutex_unlock(&offset_mutex);
 
     // debugging offset
     printk("calculated offset (ms): %lld\n", system_rtc_offset_ms);
-
-    if (system_rtc_offset_ms < -31536000000LL || system_rtc_offset_ms > 31536000000LL) {
-        printk("offset out of range! calculation error\n");
-        system_rtc_offset_ms = 0; // reset offset to prevent incorrect timestamps
-    }
+    return 0;
 }
 
-//  ========== app_rtc_get_time ============================================================
-uint64_t app_rtc_get_time()
+//  ========== app_rtc_get_time ==========================================================
+uint64_t app_rtc_get_time(void)
 {
-    // get the current system uptime in milliseconds
     int64_t current_uptime_ms = k_uptime_get();
+    int64_t offset_ms;
+
+    // safely read the offset
+    k_mutex_lock(&offset_mutex, K_FOREVER);
+    offset_ms = system_rtc_offset_ms;
+    k_mutex_unlock(&offset_mutex);
 
     // check for overflow or underflow
-    if (system_rtc_offset_ms > 0 && 
-        current_uptime_ms > UINT64_MAX - system_rtc_offset_ms) {
+    if (offset_ms > 0 &&
+        current_uptime_ms > UINT64_MAX - offset_ms) {
         printk("overflow detected in timestamp calculation\n");
         return UINT64_MAX;
     }
-    if (system_rtc_offset_ms < 0 && 
-        current_uptime_ms < (uint64_t)(-system_rtc_offset_ms)) {
+    if (offset_ms < 0 &&
+        current_uptime_ms < (uint64_t)(-offset_ms)) {
         printk("underflow detected in timestamp calculation\n");
         return 0;
     }
+    uint64_t timestamp_ms = current_uptime_ms + offset_ms;
+    return timestamp_ms;
+}
 
-    // adjust the system uptime using the RTC offset
-    uint64_t millisecond_timestamp = current_uptime_ms + system_rtc_offset_ms;
-
-    return millisecond_timestamp;
+//  ========== app_rtc_periodic_sync====================================================
+int8_t app_rtc_periodic_sync(const struct device *rtc_dev)
+{
+    // example: Call this periodically from a thread or workqueue
+    int ret = app_rtc_sync_uptime(rtc_dev);
+    if (ret < 0) {
+        printk("periodic sync failed, error: %d", ret);
+    }
+    return 0;
 }

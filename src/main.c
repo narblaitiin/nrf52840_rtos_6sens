@@ -7,7 +7,7 @@
 
 //  ========== includes ====================================================================
 #include <zephyr/kernel.h>
-#include "app_sht31_bat_handler.h"
+#include "app_sensors.h"
 #include "app_adc.h"
 #include "app_eeprom.h"
 #include "app_rtc.h"
@@ -44,8 +44,9 @@ void lorawan_thread_func(void)
 	printk("LoRaWAN thread started\n");
     while (lorawan_thread_running == true) {
         printk("performing periodic action\n");
-        (void)app_sht31_bat_handler();	// perform your task
-        k_sleep(K_SECONDS(60)); 		// sleep for 1 minutes -> test
+		// perform your task: get battery level, temperature and humidity
+        (void)app_sensors_handler();	
+        k_sleep(K_SECONDS(120));		// sleep for 2 minutes -> test
     }
 }
 K_THREAD_DEFINE(lorawan_thread_id, STACK_SIZE, lorawan_thread_func, NULL, NULL, NULL, PRIORITY, 0, 0);
@@ -68,7 +69,7 @@ int8_t main(void)
 	// initialize flash memory
 	ret = app_flash_init(&flash);
 	if (ret != 1) {
-		printk("failed to initialize ADC device\n");
+		printk("failed to initialize internal flash device\n");
 		return 0;
 	}
 
@@ -76,7 +77,7 @@ int8_t main(void)
 	const struct device *flash_dev = DEVICE_DT_GET(SPI_FLASH_DEVICE);
 	ret = app_eeprom_init(flash_dev);
 	if (ret != 1) {
-		printk("failed to initialize QSPI Flash device\n");
+		printk("failed to initialize QSPI flash device\n");
 		return 0;
 	}
 
@@ -86,17 +87,12 @@ int8_t main(void)
         printk("failed to initialize RTC device\n");
         return 0;
     }
-
-	sync_uptime_with_rtc(rtc_dev);
+	
+	// periodic synchronisation between RTC and uptime
+	(void)app_rtc_periodic_sync(rtc_dev);
 
 	// initialize LoRaWAN protocol and register the device
-	// ret = app_lorawan_init();
-	// if (ret != 1) {
-	// 	printk("failed to initialze LoRaWAN protocol\n");
-	// 	return 0;
-	// }
-
-    const struct device *lora_dev;
+	const struct device *lora_dev;
 	struct lorawan_join_config join_cfg;
 	uint8_t dev_eui[] = LORAWAN_DEV_EUI;
 	uint8_t join_eui[] = LORAWAN_JOIN_EUI;
@@ -142,8 +138,8 @@ int8_t main(void)
 	lorawan_thread_running = true;
 
 	// start ADC sampling and STA/LTA threads
-//	adc_sampling_start();
-//    sta_lta_start();
+	app_adc_sampling_start();
+    app_sta_lta_start();
 
 	return 0;
 }

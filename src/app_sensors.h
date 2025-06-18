@@ -5,8 +5,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#ifndef APP_SHT31_ADC_HANDLER_H
-#define APP_SHT31_ADC_HANDLER_H
+#ifndef APP_SENSORSH
+#define APP_SENSORS_H
 
 //  ========== includes ====================================================================
 #include "app_adc.h"
@@ -23,6 +23,6 @@
 #define BYTE_PAYLOAD            12                   // 6 int16 values => 12 bytes                 
 
 //  ========== prototypes ==================================================================
-int8_t app_sht31_bat_handler();
+int8_t app_sensors_handler();
 
-#endif /* APP_SHT31_ADC_HANDLER_H */
+#endif /* APP_SENSORS_H */

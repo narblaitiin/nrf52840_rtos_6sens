@@ -44,7 +44,7 @@ static float calculate_sta(const uint16_t *buffer, size_t size) {
     return sum / size;
 }
 
-//  ========== calculate ===================================================================
+//  ========== calculate_lad ===============================================================
 // function to calculate the Long-Term Average (LTA) of a given buffer
 static float calculate_lta(const uint16_t *buffer, size_t size) {
     float sum = 0.0;
@@ -57,7 +57,7 @@ static float calculate_lta(const uint16_t *buffer, size_t size) {
 
 //  ========== sta_lta_thread ==============================================================
 // thread function to monitor and analyze data using the STA/LTA algorithm
-static void sta_lta_thread(void *arg1, void *arg2, void *arg3) {
+static void app_sta_lta_thread(void *arg1, void *arg2, void *arg3) {
     static bool event_triggered = false;
     while (1) {
         // wait for a semaphore indicating that new ADC data is available
@@ -69,8 +69,8 @@ static void sta_lta_thread(void *arg1, void *arg2, void *arg3) {
         int lta_offset = (ring_head - LTA_WINDOW_SIZE + ADC_BUFFER_SIZE) % ADC_BUFFER_SIZE;
         
         // retrieve the most recent data for the STA and LTA buffers
-        adc_get_buffer(sta_buffer, STA_WINDOW_SIZE, sta_offset);
-        adc_get_buffer(lta_buffer, LTA_WINDOW_SIZE, lta_offset);
+        app_adc_get_buffer(sta_buffer, STA_WINDOW_SIZE, sta_offset);
+        app_adc_get_buffer(lta_buffer, LTA_WINDOW_SIZE, lta_offset);
 
         // adc_get_buffer(sta_buffer, STA_WINDOW_SIZE, -STA_WINDOW_SIZE);
         // adc_get_buffer(lta_buffer, LTA_WINDOW_SIZE, -LTA_WINDOW_SIZE);
@@ -96,7 +96,7 @@ static void sta_lta_thread(void *arg1, void *arg2, void *arg3) {
         // check if the STA/LTA ratio exceeds the defined threshold
         if (ratio > TRIGGER_THRESHOLD) {
             printk(">>> EVENT START (ratio = %.2f)\n", ratio);
-            lorawan_trigger_transmission();
+            app_lorawan_trigger_tx();
         }
 
         // check if the STA/LTA ratio exceeds the defined threshold
@@ -104,7 +104,7 @@ static void sta_lta_thread(void *arg1, void *arg2, void *arg3) {
         // if (!event_triggered && ratio > TRIGGER_THRESHOLD) {
         //     event_triggered = true;
         //     printk(">>> EVENT START (ratio = %.2f)\n", ratio);
-        //     lorawan_trigger_transmission();
+        //     app_lorawan_trigger_tx();
         // }
         // else if (event_triggered && ratio < RESET_THRESHOLD) {
         //     event_triggered = false;
@@ -115,7 +115,7 @@ static void sta_lta_thread(void *arg1, void *arg2, void *arg3) {
 
 //  ========== sta_lta_start ===============================================================
 // create and initialize the thread with the specified stack and priority
-void sta_lta_start(void) {
+void app_sta_lta_start(void) {
     k_thread_create(&sta_lta_thread_data, sta_lta_stack, K_THREAD_STACK_SIZEOF(sta_lta_stack),
-                    sta_lta_thread, NULL, NULL, NULL, 2, 0, K_NO_WAIT);
+                    app_sta_lta_thread, NULL, NULL, NULL, 2, 0, K_NO_WAIT);
 }

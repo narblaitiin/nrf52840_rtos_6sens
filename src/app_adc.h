@@ -32,9 +32,9 @@ extern int ring_head;
 //  ========== prototypes ==================================================================
 int8_t app_nrf52_adc_init();
 int16_t app_nrf52_get_ain1();
-void adc_sampling_start(void);
-void adc_sampling_stop(void);
-void adc_get_buffer(uint16_t *dest, size_t size, int offset);
-void set_sampling_rate(uint32_t rate_ms);
+void app_adc_sampling_start(void);
+void app_adc_sampling_stop(void);
+void app_adc_get_buffer(uint16_t *dest, size_t size, int offset);
+void app_adc_set_sampling_rate(uint32_t rate_ms);
 
 #endif /* APP_ADC_H */
