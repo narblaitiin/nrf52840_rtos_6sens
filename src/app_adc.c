@@ -79,7 +79,6 @@ int8_t app_nrf52_adc_init()
 
     adc_initialized = true;
     printk("ADC initialized successfully\n");
-
     return 1;
 }
 
@@ -122,7 +121,8 @@ int16_t app_nrf52_get_ain1()
 }
 
 //  ========== app_adc_thread ==============================================================
-static void app_adc_thread(void *arg1, void *arg2, void *arg3) {
+static void app_adc_thread(void *arg1, void *arg2, void *arg3)
+{
     while (!stop_sampling) {
         if (adc_read(adc_channel.dev, &sequence0) == 0) {
             k_mutex_lock(&buffer_lock, K_FOREVER);
@@ -146,7 +146,8 @@ static void app_adc_thread(void *arg1, void *arg2, void *arg3) {
 //  ========== adc_sampling_start and stop  ================================================
 // start the ADC sampling thread
 // the thread reads data from the ADC and stores it in a ring buffer
-void app_adc_sampling_start(void) {
+void app_adc_sampling_start(void)
+{
     stop_sampling = false;
     k_thread_create(&adc_thread_data, adc_stack, K_THREAD_STACK_SIZEOF(adc_stack),
                     app_adc_thread, NULL, NULL, NULL, 1, 0, K_NO_WAIT);
@@ -154,7 +155,8 @@ void app_adc_sampling_start(void) {
 }
 
 // stop ADC sampling thread
-void app_adc_sampling_stop(void) {
+void app_adc_sampling_stop(void)
+{
     stop_sampling = true;
     k_sem_give(&rate_change_sem); // interrupt sleep if needed
     k_thread_join(&adc_thread_data, K_FOREVER);
@@ -164,7 +166,8 @@ void app_adc_sampling_stop(void) {
 //  ========== adc_get_buffer ==============================================================
 // copie a portion of the ADC ring buffer to a user-supplied buffer.
 // use a mutex to ensure thread-safe access.
-void app_adc_get_buffer(uint16_t *dest, size_t size, int offset) {
+void app_adc_get_buffer(uint16_t *dest, size_t size, int offset)
+{
     if (!dest || size > ADC_BUFFER_SIZE) {
         printk("invalid parameters in adc_get_buffer.\n");
         return;
@@ -188,7 +191,8 @@ void app_adc_get_buffer(uint16_t *dest, size_t size, int offset) {
 }
 
 // set ADC sampling rate
-void app_adc_set_sampling_rate(uint32_t rate_ms) {
+void app_adc_set_sampling_rate(uint32_t rate_ms)
+{
     sampling_rate_ms = rate_ms;
     k_sem_give(&rate_change_sem);  // signal the thread about the rate change
     //printk("sampling rate set to %d ms.\n", rate_ms);

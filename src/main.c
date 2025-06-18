@@ -14,6 +14,7 @@
 #include <stdbool.h>
 #include <stdio.h>
 
+//  ========== defines =====================================================================
 #define STACK_SIZE 2048
 #define PRIORITY   2
 
@@ -140,6 +141,5 @@ int8_t main(void)
 	// start ADC sampling and STA/LTA threads
 	app_adc_sampling_start();
     app_sta_lta_start();
-
 	return 0;
 }

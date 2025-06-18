@@ -22,7 +22,8 @@ K_THREAD_STACK_DEFINE(lorawan_stack, 1024);
 struct k_thread lorawan_thread_data;
 
 //  ========== serialize_uint64_to_bytes ===================================================
-static void serialize_uint64_to_bytes(uint64_t value, uint8_t *buffer) {
+static void serialize_uint64_to_bytes(uint64_t value, uint8_t *buffer)
+{
     for (int i = 0; i < 8; i++) {
         buffer[i] = (value >> (56 - 8 * i)) & 0xFF;
     }
@@ -30,7 +31,8 @@ static void serialize_uint64_to_bytes(uint64_t value, uint8_t *buffer) {
 
 //  ========== app_lorawan_thread ==========================================================
 // LoRaWAN thread function: handles ADC data acquisition and sends it over LoRaWAN
-static void app_lorawan_thread(void *arg1, void *arg2, void *arg3) {
+static void app_lorawan_thread(void *arg1, void *arg2, void *arg3) 
+{
     // allocate a buffer for ADC data with additional space for the timestamp
     uint8_t data[ADC_BUFFER_SIZE * sizeof(uint16_t) + 8];
 
@@ -59,14 +61,16 @@ static void app_lorawan_thread(void *arg1, void *arg2, void *arg3) {
 
 //  ========== app_lorawan_trigger_tx ======================================================
 // function to trigger the LoRaWAN thread to resume execution.
-void app_lorawan_trigger_tx(void) {
+void app_lorawan_trigger_tx(void)
+{
     // resume the suspended LoRaWAN thread, allowing it to execute.
     k_thread_resume(&lorawan_thread_data);
 }
 
 //  ========== app_lorawan_start ===========================================================
 // function to initialize and start the LoRaWAN transmission thread
-int app_lorawan_start_tx(void) {
+int app_lorawan_start_tx(void)
+{
     // create the LoRaWAN thread with the defined stack and function
     k_thread_create(&lorawan_thread_data, lorawan_stack, K_THREAD_STACK_SIZEOF(lorawan_stack),
                     app_lorawan_thread, NULL, NULL, NULL, 3, 0, K_NO_WAIT);

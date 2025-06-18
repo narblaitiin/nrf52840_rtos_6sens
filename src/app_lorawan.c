@@ -137,7 +137,6 @@ int8_t app_lorawan_init(void)
 	// turn off LEDs to indicate the end of the process
 	gpio_pin_set_dt(&led_tx, 0);
 	gpio_pin_set_dt(&led_rx, 0);
-	
     return 1;
 }
 

@@ -32,7 +32,6 @@ int16_t app_sht31_get_temp(const struct device *dev)
 
     // print the temperature value with two decimal places
     printk("SHT31 temperature: %d.%02d °C\n", temp / TEMP_SCALE, temp % TEMP_SCALE);
-    
     return (int16_t)temp;
 }
 
@@ -60,6 +59,5 @@ int16_t app_sht31_get_hum(const struct device *dev)
 
     // print the humifity value with two decimal places
     printk("SHT31 humidity: %d.%02d %%RH\n", hum / HUM_SCALE, hum % HUM_SCALE);
-    
     return (int16_t)hum;
 }

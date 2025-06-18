@@ -16,7 +16,7 @@
 #include <stdint.h>
 
 //  ========== defines =====================================================================
-#define TEMP_SCALE  100     // scale for converting to int6_t
+#define TEMP_SCALE  100     // scale for converting to int16_t
 #define HUM_SCALE   100     // scale for converting to int16_t
 
 //  ========== prototypes ==================================================================

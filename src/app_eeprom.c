@@ -27,7 +27,6 @@ int8_t app_eeprom_init(const struct device *dev)
 	} else {
         printk("- found device \"%s\"\n", dev->name);
     }
-
 	return 1;
 }
 
@@ -45,7 +44,6 @@ int8_t app_eeprom_write(const struct device *dev, int16_t data)
 	}
 	// printing data
 	printk("write -> rom val: %d\n", data);
-
 	return 0;
 }
 
