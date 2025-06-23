@@ -19,6 +19,7 @@
  
 //  ========== defines =====================================================================
 #define DS3231_I2C_ADDR 0x68
+#define CONFIG_COUNTER_NRF_RTC
  
 //  ========== prototypes ==================================================================
 const struct device *app_rtc_init(void);
