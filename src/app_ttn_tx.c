@@ -42,7 +42,8 @@ static void app_lorawan_thread(void *arg1, void *arg2, void *arg3)
     while (1) {
         // retrieve the current timestamp
         uint64_t timestamp = app_rtc_get_time();
-
+        //uint64_t timestamp = app_ds3231_get_time();
+        
         // serialize timestamp into the data buffer
         serialize_uint64_to_bytes(timestamp, data);
 

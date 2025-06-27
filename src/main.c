@@ -15,8 +15,9 @@
 #include <stdio.h>
 
 //  ========== defines =====================================================================
-#define STACK_SIZE 2048
-#define PRIORITY   2
+#define STACK_SIZE			2048
+#define PRIORITY_RTC		2
+#define PRIORITY_LORAWAN	3
 
 //  ========== globals =====================================================================
 // define GPIO specifications for the LEDs used to indicate transmission (TX) and reception (RX)
@@ -30,6 +31,36 @@ static void dl_callback(uint8_t port, bool data_pending,
 	printk("Port %d, Pending %d, RSSI %ddB, SNR %ddBm\n", port, data_pending, rssi, snr);
 }
 
+// thread to have a periodic sync
+bool rtc_thread_flag = true;
+void rtc_thread_func(void)
+{
+	printk("periodic sync thread started\n");
+
+	const struct device *rtc_dev = DEVICE_DT_GET(DT_NODELABEL(rtc0));
+	while (rtc_thread_flag == true) {
+        printk("performing periodic action\n");
+        (void)app_rtc_periodic_sync(rtc_dev);
+		//(void)app_ds3231_periodic_sync(rtc_dev);
+        k_sleep(K_SECONDS(5));		
+	}
+}
+K_THREAD_DEFINE(rtc_thread_id, STACK_SIZE, rtc_thread_func, NULL, NULL, NULL, PRIORITY_RTC, 0, 0);
+
+// thread to send environment value when no activity
+bool lorawan_thread_flag = true;
+void lorawan_thread_func(void)
+{
+	printk("LoRaWAN thread started\n");
+    while (lorawan_thread_flag == true) {
+        printk("performing periodic action\n");
+		// perform your task: get battery level, temperature and humidity
+        (void)app_sensors_handler();	
+        k_sleep(K_SECONDS(120));		// sleep for 2 minutes -> test
+    }
+}
+K_THREAD_DEFINE(lorawan_thread_id, STACK_SIZE, lorawan_thread_func, NULL, NULL, NULL, PRIORITY_LORAWAN, 0, 0);
+
 static void lorwan_datarate_changed(enum lorawan_datarate dr)
 {
 	uint8_t unused, max_size;
@@ -37,20 +68,6 @@ static void lorwan_datarate_changed(enum lorawan_datarate dr)
 	lorawan_get_payload_sizes(&unused, &max_size);
 	printk("New Datarate: DR_%d, Max Payload %d\n", dr, max_size);
 }
-
-bool lorawan_thread_running = true;
-
-void lorawan_thread_func(void)
-{
-	printk("LoRaWAN thread started\n");
-    while (lorawan_thread_running == true) {
-        printk("performing periodic action\n");
-		// perform your task: get battery level, temperature and humidity
-        (void)app_sensors_handler();	
-        k_sleep(K_SECONDS(120));		// sleep for 2 minutes -> test
-    }
-}
-K_THREAD_DEFINE(lorawan_thread_id, STACK_SIZE, lorawan_thread_func, NULL, NULL, NULL, PRIORITY, 0, 0);
 
 //  ========== main ========================================================================
 int8_t main(void)
@@ -88,9 +105,6 @@ int8_t main(void)
         printk("failed to initialize RTC device\n");
         return 0;
     }
-	
-	// periodic synchronisation between RTC and uptime
-	(void)app_rtc_periodic_sync(rtc_dev);
 
 	// initialize LoRaWAN protocol and register the device
 	const struct device *lora_dev;
@@ -136,7 +150,10 @@ int8_t main(void)
 	printk("Geophone Measurement and Process Information\n");
 
 	// enable environmental sensor and battery level thread
-	lorawan_thread_running = true;
+	lorawan_thread_flag = true;
+
+	// enable periodic rtc sync thread
+	rtc_thread_flag = true;
 
 	// start ADC sampling and STA/LTA threads
 	app_adc_sampling_start();

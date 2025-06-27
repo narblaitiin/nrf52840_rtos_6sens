@@ -16,92 +16,85 @@ static struct k_mutex offset_mutex;
 //  ========== app_rtc_init ================================================================
 const struct device *app_rtc_init(void)
 {
-    //const struct device *rtc_dev = DEVICE_DT_GET_ONE(maxim_ds3231);
     const struct device *rtc_dev = DEVICE_DT_GET(DT_NODELABEL(rtc0));
-    if (!rtc_dev) {
-        printk("no RTC device found\n");
-        return NULL;
-    }
-
     if (!device_is_ready(rtc_dev)) {
         printk("RTC device is not ready\n");
         return NULL;
     }
 
-    const struct rtc_time tm = {
-        .tm_year = 2025,
-        .tm_mon  = 6,
-        .tm_mday = 24,
-        .tm_hour = 12,
-        .tm_min  = 0,
-        .tm_sec  = 0,
-    };
-    
-    int8_t ret = rtc_set_time(rtc_dev, &tm);
+    // start the counter
+    int ret = counter_start(rtc_dev);
     if (ret < 0) {
-        printk("failed to get time from RTC, %d\n", ret);
+        printk("failed to start RTC: %d\n", ret);
+        return NULL;
     }
-
-    printk("RTC set time: year=%d, month=%d, day=%d, hour=%d, minute=%d, second=%d\n",
-        tm.tm_year, tm.tm_mon, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 
     // initialize mute
     k_mutex_init(&offset_mutex);
 
-    printk("RTC device \"%s\" initialized successfully\n", rtc_dev->name);
+    printk("RTC initialized and started successfully\n");
     return rtc_dev;
 }
 
 //  ========== app_rtc_sync_uptime ========================================================
-// synchronize the system uptime with the DS3231 RTC.
-int8_t  app_rtc_sync_uptime(const struct device *i2c_dev)
+// synchronize the system uptime with the on board RTC.
+int8_t app_rtc_sync_uptime(const struct device *rtc_dev)
 {
-    struct tm rtc_time;
+    if (!rtc_dev) {
+        printk("RTC device is NULL\n");
+        return -EINVAL;
+    }
 
-    // read RTC time
-    int8_t ret = rtc_get_time(i2c_dev, &rtc_time);
+    uint32_t rtc_ticks;
+    uint32_t top_value;
+    uint32_t frequency;
+    int64_t rtc_time_ms;
+    int64_t current_uptime_ms;
+    int64_t new_offset_ms;
+
+    // retrieve the current RTC counter value
+    int ret = counter_get_value(rtc_dev, &rtc_ticks);
     if (ret < 0) {
-        printk("failed to get time from RTC, %d\n", ret);
+        printk("failed to get RTC counter value, error: %d\n", ret);
+        return ret;
     }
 
-    printk("RTC time: year=%d, month=%d, day=%d, hour=%d, minute=%d, second=%d\n",
-       rtc_time.tm_year, rtc_time.tm_mon, rtc_time.tm_mday,
-       rtc_time.tm_hour, rtc_time.tm_min, rtc_time.tm_sec);
+    // get the counter's top value and frequency
+    top_value = counter_get_top_value(rtc_dev);
+    frequency = counter_get_frequency(rtc_dev);
 
-    // convert RTC time to Unix seconds
-    int64_t rtc_unix_seconds = mktime(&rtc_time);
-    if (rtc_unix_seconds > 0) {
-        printk("RTC time: %lld seconds\n", rtc_unix_seconds);
-    } else {
-        printk("invalid RTC time conversion\n");
-    }
+    // convert the RTC ticks to milliseconds
+    rtc_time_ms = ((int64_t)rtc_ticks * 1000) / frequency;
 
-    // calculate current system uptime in milliseconds
-    int64_t current_uptime_ms = k_uptime_get();
+    // debug output
+    printk("RTC ticks: %u, top: %u, freq: %u Hz, time_ms: %lld\n",
+           rtc_ticks, top_value, frequency, rtc_time_ms);
 
-    // debugging logs for validation
-    printk("RTC unix seconds: %lld\n", rtc_unix_seconds);
-    printk("system uptime (ms): %lld\n", current_uptime_ms);
+    // get the current system uptime in milliseconds
+    current_uptime_ms = k_uptime_get();
 
-    // calculate the offset between the RTC and the system clock
-    int64_t new_offset_ms = (rtc_unix_seconds * 1000LL) - current_uptime_ms;
+    // calculate the offset between RTC time and system uptime
+    new_offset_ms = rtc_time_ms - current_uptime_ms;
 
-    if (new_offset_ms< -31536000000LL || new_offset_ms > 31536000000LL) {
+    // validate the offset (example: restrict offset to ±1 year for sanity)
+    if (new_offset_ms < -ONE_YEAR_MS|| new_offset_ms > ONE_YEAR_MS) {
         printk("offset out of range! calculation error\n");
+        return -EINVAL;
     }
 
-    // update global offset safely
+    // safely update the global offset
     k_mutex_lock(&offset_mutex, K_FOREVER);
     system_rtc_offset_ms = new_offset_ms;
     k_mutex_unlock(&offset_mutex);
 
-    // debugging offset
+    // debugging output
     printk("calculated offset (ms): %lld\n", system_rtc_offset_ms);
+
     return 0;
 }
 
 //  ========== app_rtc_get_time ==========================================================
-uint64_t app_rtc_get_time(void)
+uint64_t app_rtc_get_time(const struct device *rtc_dev)
 {
     int64_t current_uptime_ms = k_uptime_get();
     int64_t offset_ms;
@@ -129,7 +122,12 @@ uint64_t app_rtc_get_time(void)
 //  ========== app_rtc_periodic_sync====================================================
 int8_t app_rtc_periodic_sync(const struct device *rtc_dev)
 {
-    // example: Call this periodically from a thread or workqueue
+    if (!rtc_dev) {
+        printk("RTC device is NULL\n");
+        return -EINVAL;
+    }
+    
+    // call this periodically from a thread or workqueue
     int ret = app_rtc_sync_uptime(rtc_dev);
     if (ret < 0) {
         printk("periodic sync failed, error: %d", ret);
