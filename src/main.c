@@ -73,27 +73,27 @@ static void lorwan_datarate_changed(enum lorawan_datarate dr)
 int8_t main(void)
 {
 	const struct device *dev;
-	struct nvs_fs flash;
+	int8_t ret;
 
 	printk("Initializtion of all Hardware Devices\n");
 
 	// initialize ADC device
-	int8_t ret = app_nrf52_adc_init();
+	ret = app_nrf52_adc_init();
 	if (ret != 1) {
 		printk("failed to initialize ADC device\n");
 		return 0;
 	}
 
-	// initialize flash memory
-	ret = app_flash_init(&flash);
+	// initialize partition flash memory
+	ret = app_flash_init();
 	if (ret != 1) {
-		printk("failed to initialize internal flash device\n");
+		printk("failed to initialize internal Flash device\n");
 		return 0;
 	}
 
 	// initialize the EEPROM device
-	const struct device *flash_dev = DEVICE_DT_GET(SPI_FLASH_DEVICE);
-	ret = app_eeprom_init(flash_dev);
+	const struct device *eeprom_dev = DEVICE_DT_GET(SPI_FLASH_DEVICE);
+	ret = app_eeprom_init(eeprom_dev);
 	if (ret != 1) {
 		printk("failed to initialize QSPI flash device\n");
 		return 0;
