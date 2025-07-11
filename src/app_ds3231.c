@@ -5,136 +5,176 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-//  ========== includes ====================================================================
+//  ========== includes ==================================================================
 #include "app_ds3231.h"
 
-//  ========== globals ====================================================================
-// global variable to track the offset between the system clock and RTC
+//  ========== globals ===================================================================
 static int64_t system_rtc_offset_ms = 0;
 static struct k_mutex offset_mutex;
+
+//  ========== bcd_to_bin ================================================================ 
+static uint8_t bcd_to_bin(uint8_t val)
+{
+    return ((val >> 4) * 10) + (val & 0x0F);
+}
+
+// ========== bin_to_bcd =================================================================
+static uint8_t bin_to_bcd(uint8_t val)
+{
+    return ((val / 10) << 4) | (val % 10);
+}
+
+//  ========== et_ds3231_from_unix_time ==================================================
+void set_ds3231_from_unix_time(const struct device *rtc_dev, int64_t unix_time)
+{
+    struct tm tm;
+    time_t t = (time_t)unix_time;
+    gmtime_r(&t, &tm);  
+    //timeutil_localtime64(unix_time, &tm);
+    ds3231_set_time(rtc_dev, &tm);
+}
+
+// ========== ds3231_set_time ============================================================
+int8_t ds3231_set_time(const struct device *i2c_dev, const struct tm *tm)
+{
+    uint8_t time_buf[7];
+    int8_t ret;
+
+    if (!i2c_dev || !tm) {
+        return -EINVAL;
+    }
+
+    time_buf[0] = bin_to_bcd(tm->tm_sec);
+    time_buf[1] = bin_to_bcd(tm->tm_min);
+    time_buf[2] = bin_to_bcd(tm->tm_hour);
+    time_buf[3] = bin_to_bcd(tm->tm_wday + 1);         // struct tm: 0=Sun → DS3231: 1=Sun
+    time_buf[4] = bin_to_bcd(tm->tm_mday);
+    time_buf[5] = bin_to_bcd(tm->tm_mon + 1);          // struct tm: 0=Jan → DS3231: 1=Jan
+    time_buf[6] = bin_to_bcd(tm->tm_year - 100);       // struct tm: years since 1900 → DS3231: years since 2000
+
+    ret = i2c_burst_write(i2c_dev, DS3231_I2C_ADDR, DS3231_REG_TIME, time_buf, sizeof(time_buf));
+    if (ret < 0) {
+        printk("failed to write time to DS3231: %d\n", ret);
+        return ret;
+    }
+
+    printk("DS3231 time set successfully\n");
+    return 0;
+}
+
+//  ========== ds3231_get_time ================================================================ 
+int8_t ds3231_get_time(const struct device *i2c_dev, struct tm *tm)
+{
+    uint8_t time_buf[7];
+    int8_t ret;
+
+    if (!i2c_dev || !tm) {
+        return -EINVAL;
+    }
+
+    ret = i2c_burst_read(i2c_dev, DS3231_I2C_ADDR, DS3231_REG_TIME, time_buf, sizeof(time_buf));
+    if (ret < 0) {
+        printk("failed to read DS3231 registers. error: %d", ret);
+        return ret;
+    }
+
+    tm->tm_sec  = bcd_to_bin(time_buf[0] & 0x7F);
+    tm->tm_min  = bcd_to_bin(time_buf[1] & 0x7F);
+    tm->tm_hour = bcd_to_bin(time_buf[2] & 0x3F);  // 24-hour format
+    tm->tm_wday = bcd_to_bin(time_buf[3] & 0x07) - 1;  // DS3231: 1=Sun...7=Sat → struct tm: 0=Sun...6=Sat
+    tm->tm_mday = bcd_to_bin(time_buf[4] & 0x3F);
+    tm->tm_mon  = bcd_to_bin(time_buf[5] & 0x1F) - 1;  // struct tm: 0=Jan
+    tm->tm_year = bcd_to_bin(time_buf[6]) + 100;       // since 1900 → 2000 + xx
+
+    return 0;
+}
 
 //  ========== app_rtc_init ================================================================
 const struct device *app_ds3231_init(void)
 {
-    const struct device *rtc_dev = DEVICE_DT_GET_ONE(maxim_ds3231);
-    if (!rtc_dev) {
-        printk("no RTC device found\n");
+    const struct device *i2c_dev = DEVICE_DT_GET_ONE(maxim_ds3231);
+    if (!i2c_dev) {
+        printk("no DS3231 device found\n");
         return NULL;
     }
 
-    if (!device_is_ready(rtc_dev)) {
-        printk("RTC device is not ready\n");
-        return NULL;
-    }
-
-    const struct tm tm = {
-        .tm_year = 2025,
-        .tm_mon  = 6,
-        .tm_mday = 24,
-        .tm_hour = 12,
-        .tm_min  = 0,
-        .tm_sec  = 0,
-    };
-    
-    int8_t ret = rtc_set_time(rtc_dev, &tm);
-    if (ret < 0) {
-        printk("failed to get time from RTC, %d\n", ret);
-    }
-
-     printk("RTC set time: %04d-%02d-%02d %02d:%02d:%02d",
-        tm.tm_year, tm.tm_mon, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-
-    // initialize mute
+    // initialize mutex
     k_mutex_init(&offset_mutex);
 
-    printk("RTC device \"%s\" initialized successfully\n", rtc_dev->name);
-    return rtc_dev;
+    printk("DS3231 initialized and started successfully (device: %s)\n", i2c_dev->name);
+    return i2c_dev;
 }
 
 //  ========== app_ds3231_sync_uptime ========================================================
-// synchronize the system uptime with the DS3231 RTC.
+// synchronize the system uptime with the DS3231 RTC
 int8_t app_ds3231_sync_uptime(const struct device *i2c_dev)
 {
-struct tm rtc_time;
-
-    // read RTC time
-    int8_t ret = rtc_get_time(i2c_dev, &rtc_time);
-    if (ret < 0) {
-        printk("failed to get time from RTC, %d\n", ret);
+    if (!i2c_dev) {
+        printk("DS3231 device is NULL\n");
+        return -EINVAL;
     }
 
-    printk("RTC get time: %04d-%02d-%02d %02d:%02d:%02d",
-       rtc_time.tm_year, rtc_time.tm_mon, rtc_time.tm_mday,
-       rtc_time.tm_hour, rtc_time.tm_min, rtc_time.tm_sec);
+    struct tm rtc_tm;
+    int64_t rtc_epoch_s;
+    int64_t rtc_epoch_ms;
+    int64_t current_uptime_ms;
+    int64_t new_offset_ms;
 
-    // convert RTC time to Unix seconds
-    int64_t rtc_unix_seconds = mktime(&rtc_time);
-    if (rtc_unix_seconds > 0) {
-        printk("RTC time: %lld seconds\n", rtc_unix_seconds);
-    } else {
-        printk("invalid RTC time conversion\n");
+    // get time from external RTC
+    if (ds3231_get_time(i2c_dev, &rtc_tm) != 0) {
+        printk("failed to read time from DS3231\n");
+        return -EIO;
     }
 
-    // calculate current system uptime in milliseconds
-    int64_t current_uptime_ms = k_uptime_get();
+    // calculate the offset between RTC time and system uptime
+    rtc_epoch_s = timeutil_timegm64(&rtc_tm);
+    rtc_epoch_ms = rtc_epoch_s * 1000;
+    current_uptime_ms = k_uptime_get();
+    new_offset_ms = rtc_epoch_ms - current_uptime_ms;
 
-    // debugging logs for validation
-    printk("RTC unix seconds: %lld\n", rtc_unix_seconds);
-    printk("system uptime (ms): %lld\n", current_uptime_ms);
-
-    // calculate the offset between the RTC and the system clock
-    int64_t new_offset_ms = (rtc_unix_seconds * 1000LL) - current_uptime_ms;
-
-    if (new_offset_ms< -ONE_YEAR_MS  || new_offset_ms > ONE_YEAR_MS ) {
-        printk("offset out of range! calculation error\n");
-    }
-
-    // update global offset safely
+    // safely update the global offset
     k_mutex_lock(&offset_mutex, K_FOREVER);
     system_rtc_offset_ms = new_offset_ms;
     k_mutex_unlock(&offset_mutex);
 
-    // debugging offset
-    printk("calculated offset (ms): %lld\n", system_rtc_offset_ms);
+    // debugging output
+    printk("synced: DS3231 epoch_ms = %lld, uptime = %lld, offset = %lld\n",
+           rtc_epoch_ms, current_uptime_ms, new_offset_ms);
+
     return 0;
 }
 
 //  ========== app_rtc_get_time ==========================================================
-uint64_t app_ds3231_get_time(void)
+uint64_t app_ds3231_get_time()
 {
-    int64_t current_uptime_ms = k_uptime_get();
-    int64_t offset_ms;
+    int64_t now_ms = k_uptime_get();
+    int64_t offset;
 
-    // safely read the offset
     k_mutex_lock(&offset_mutex, K_FOREVER);
-    offset_ms = system_rtc_offset_ms;
+    offset = system_rtc_offset_ms;
     k_mutex_unlock(&offset_mutex);
 
-    // check for overflow or underflow
-    if (offset_ms > 0 &&
-        current_uptime_ms > UINT64_MAX - offset_ms) {
-        printk("overflow detected in timestamp calculation\n");
+    // protect against overflow
+    if (offset > 0 && now_ms > UINT64_MAX - offset) {
         return UINT64_MAX;
     }
-    if (offset_ms < 0 &&
-        current_uptime_ms < (uint64_t)(-offset_ms)) {
-        printk("underflow detected in timestamp calculation\n");
+    if (offset < 0 && now_ms < (uint64_t)(-offset)) {
         return 0;
     }
-    uint64_t timestamp_ms = current_uptime_ms + offset_ms;
+    uint64_t timestamp_ms = now_ms + offset;
     return timestamp_ms;
 }
 
 //  ========== app_ds3231_periodic_sync====================================================
-int8_t app_ds3231_periodic_sync(const struct device *rtc_dev)
+int8_t app_ds3231_periodic_sync(const struct device *i2c_dev)
 {
-    if (!rtc_dev) {
+    if (!i2c_dev) {
         printk("RTC device is NULL\n");
         return -EINVAL;
     }
     
     // call this periodically from a thread or workqueue
-    int ret = app_rtc_sync_uptime(rtc_dev);
+    int ret = app_ds3231_sync_uptime(i2c_dev);
     if (ret < 0) {
         printk("periodic sync failed, error: %d", ret);
     }
