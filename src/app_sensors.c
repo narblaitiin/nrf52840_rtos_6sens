@@ -24,7 +24,8 @@ int8_t app_sensors_handler()
     gpio_pin_set_dt(&led_rx, 0);
 
     // retrieve the current timestamp from the RTC device
-    uint64_t timestamp = app_rtc_get_time();
+    uint64_t timestamp = app_ds3231_get_time();
+    //uint64_t timestamp = app_rtc_get_time();
 
     // add timestamp to byte payload (big-endian)
     for (int8_t i = 0; i < 8; i++) {

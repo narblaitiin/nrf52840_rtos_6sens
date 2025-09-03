@@ -19,7 +19,7 @@
 #define LTA_WINDOW_SIZE (LTA_WINDOW_DURATION_MS / SAMPLING_RATE_MS)
 
 // trigger thresholds with hysteresis
-#define TRIGGER_THRESHOLD           0.8f    // 5.0f // STA/LTA ratio to trigger event
+#define TRIGGER_THRESHOLD           1.0f //0.8f    // 5.0f // STA/LTA ratio to trigger event
 #define RESET_THRESHOLD             0.6f    // 2.5f // STA/LTA ratio to reset trigger
 
 //  ========== globals =====================================================================
@@ -94,22 +94,22 @@ static void app_sta_lta_thread(void *arg1, void *arg2, void *arg3)
         printk("STA: %.2f, LTA: %.2f, ratio: %.2f\n", sta, lta, ratio);
 
         // check if the STA/LTA ratio exceeds the defined threshold
-        // if (ratio > TRIGGER_THRESHOLD) {
-        //     printk(">>> EVENT START (ratio = %.2f)\n", ratio);
-        //     app_lorawan_trigger_tx();
-        // }
-
-        // check if the STA/LTA ratio exceeds the defined threshold
-        // trigger event with hysteresis
-        if (!event_triggered && ratio > TRIGGER_THRESHOLD) {
-            event_triggered = true;
+        if (ratio > TRIGGER_THRESHOLD) {
             printk(">>> EVENT START (ratio = %.2f)\n", ratio);
             app_lorawan_trigger_tx();
         }
-        else if (event_triggered && ratio < RESET_THRESHOLD) {
-            event_triggered = false;
-            printk("<<< EVENT END (ratio = %.2f)\n", ratio);
-        }
+
+        // check if the STA/LTA ratio exceeds the defined threshold
+        // trigger event with hysteresis
+        // if (!event_triggered && ratio > TRIGGER_THRESHOLD) {
+        //     event_triggered = true;
+        //     printk(">>> EVENT START (ratio = %.2f)\n", ratio);
+        //     app_lorawan_trigger_tx();
+        // }
+        // else if (event_triggered && ratio < RESET_THRESHOLD) {
+        //     event_triggered = false;
+        //     printk("<<< EVENT END (ratio = %.2f)\n", ratio);
+        // }
     }
 }
 

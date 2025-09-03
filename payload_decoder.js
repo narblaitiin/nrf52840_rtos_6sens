@@ -3,7 +3,7 @@ function decodeUplink(input) {
     var bytes = input.bytes;
 
     // decode the uint64 timestamp (big-endian representation)
-    var unixTimestamp = (bytes[0] << 56 >>> 0) | (bytes[1] << 48) | (bytes[2] << 40) | bytes[3] << 32) | bytes[4] << 24) | bytes[5] << 16) | bytes[6] << 8) | bytes[7]; // use `>>> 0` to ensure unsigned shift
+    var unixTimestamp = (bytes[0] << 56 >>> 0) | (bytes[1] << 48) | (bytes[2] << 40) | (bytes[3] << 32) | (bytes[4] << 24) | (bytes[5] << 16) | (bytes[6] << 8) | bytes[7]; // use `>>> 0` to ensure unsigned shift
 
     // convert and display Unix timestamp as a human-readable date and time 
     var date = new Date(unixTimestamp * 1000); // convert seconds to milliseconds

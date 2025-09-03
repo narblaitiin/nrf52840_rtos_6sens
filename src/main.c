@@ -38,11 +38,13 @@ void rtc_thread_func(void)
 	printk("periodic sync thread started\n");
 
 	const struct device *rtc_dev = DEVICE_DT_GET(DT_NODELABEL(rtc0));
+	const struct device *ds3231_dev = DEVICE_DT_GET_ONE(maxim_ds3231);
+
 	while (rtc_thread_flag == true) {
         printk("performing periodic action\n");
-        (void)app_rtc_periodic_sync(rtc_dev);
-		//(void)app_ds3231_periodic_sync(rtc_dev);
-        k_sleep(K_SECONDS(5));		
+        //(void)app_rtc_periodic_sync(rtc_dev);
+		(void)app_ds3231_periodic_sync(ds3231_dev);
+        k_sleep(K_SECONDS(60));		
 	}
 }
 K_THREAD_DEFINE(rtc_thread_id, STACK_SIZE, rtc_thread_func, NULL, NULL, NULL, PRIORITY_RTC, 0, 0);
@@ -56,7 +58,7 @@ void lorawan_thread_func(void)
         printk("performing periodic action\n");
 		// perform your task: get battery level, temperature and humidity
         (void)app_sensors_handler();	
-        k_sleep(K_SECONDS(120));		// sleep for 2 minutes -> test
+        k_sleep(K_SECONDS(60));		// sleep for 1 min -> test
     }
 }
 K_THREAD_DEFINE(lorawan_thread_id, STACK_SIZE, lorawan_thread_func, NULL, NULL, NULL, PRIORITY_LORAWAN, 0, 0);
@@ -150,13 +152,13 @@ int8_t main(void)
 	printk("Geophone Measurement and Process Information\n");
 
 	// enable environmental sensor and battery level thread
-	lorawan_thread_flag = true;
+	lorawan_thread_flag = false;
 
 	// enable periodic rtc sync thread
 	rtc_thread_flag = true;
 
 	// start ADC sampling and STA/LTA threads
 	app_adc_sampling_start();
-    app_sta_lta_start();
+  app_sta_lta_start();
 	return 0;
 }
